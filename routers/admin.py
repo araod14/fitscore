@@ -5,28 +5,41 @@ Admin router for managing competitions, athletes, and WODs.
 import csv
 import io
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, delete
 from sqlalchemy.orm import selectinload
 
-from database import get_db
-from models import User, Competition, Athlete, WOD, WODStandard, Score
-from schemas import (
-    CompetitionCreate, CompetitionUpdate, CompetitionResponse, CompetitionListResponse,
-    AthleteCreate, AthleteUpdate, AthleteResponse, AthleteListResponse, AthleteImportResult,
-    WODCreate, WODUpdate, WODResponse, WODListResponse, WODStandardCreate, WODStandardResponse,
-    DashboardStats,
-)
 from auth import get_current_admin, get_current_judge_or_admin
 from config import DIVISIONS, GENDERS
+from database import get_db
+from models import WOD, Athlete, Competition, Score, User, WODStandard
+from schemas import (
+    AthleteCreate,
+    AthleteImportResult,
+    AthleteListResponse,
+    AthleteResponse,
+    AthleteUpdate,
+    CompetitionCreate,
+    CompetitionListResponse,
+    CompetitionResponse,
+    CompetitionUpdate,
+    DashboardStats,
+    WODCreate,
+    WODListResponse,
+    WODResponse,
+    WODStandardCreate,
+    WODStandardResponse,
+    WODUpdate,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
 # ============== Competitions ==============
+
 
 @router.get("/competitions", response_model=CompetitionListResponse)
 async def list_competitions(
@@ -69,23 +82,29 @@ async def list_competitions(
         )
         wod_count = wod_count_result.scalar()
 
-        items.append(CompetitionResponse(
-            id=comp.id,
-            name=comp.name,
-            description=comp.description,
-            date=comp.date,
-            location=comp.location,
-            is_active=comp.is_active,
-            created_at=comp.created_at,
-            created_by=comp.created_by,
-            athlete_count=athlete_count,
-            wod_count=wod_count,
-        ))
+        items.append(
+            CompetitionResponse(
+                id=comp.id,
+                name=comp.name,
+                description=comp.description,
+                date=comp.date,
+                location=comp.location,
+                is_active=comp.is_active,
+                created_at=comp.created_at,
+                created_by=comp.created_by,
+                athlete_count=athlete_count,
+                wod_count=wod_count,
+            )
+        )
 
     return CompetitionListResponse(items=items, total=total)
 
 
-@router.post("/competitions", response_model=CompetitionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/competitions",
+    response_model=CompetitionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_competition(
     competition: CompetitionCreate,
     current_user: Annotated[User, Depends(get_current_admin)],
@@ -235,7 +254,10 @@ async def delete_competition(
 
 # ============== Athletes ==============
 
-@router.get("/competitions/{competition_id}/athletes", response_model=AthleteListResponse)
+
+@router.get(
+    "/competitions/{competition_id}/athletes", response_model=AthleteListResponse
+)
 async def list_athletes(
     competition_id: int,
     current_user: Annotated[User, Depends(get_current_judge_or_admin)],
@@ -254,8 +276,8 @@ async def list_athletes(
         query = query.where(Athlete.division == division)
     if search:
         query = query.where(
-            (Athlete.name.ilike(f"%{search}%")) |
-            (Athlete.bib_number.ilike(f"%{search}%"))
+            (Athlete.name.ilike(f"%{search}%"))
+            | (Athlete.bib_number.ilike(f"%{search}%"))
         )
 
     # Count total
@@ -271,7 +293,9 @@ async def list_athletes(
     return AthleteListResponse(items=athletes, total=total)
 
 
-@router.post("/athletes", response_model=AthleteResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/athletes", response_model=AthleteResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_athlete(
     athlete: AthleteCreate,
     current_user: Annotated[User, Depends(get_current_admin)],
@@ -291,13 +315,15 @@ async def create_athlete(
     existing = await db.execute(
         select(Athlete).where(
             Athlete.competition_id == athlete.competition_id,
-            Athlete.bib_number == athlete.bib_number
+            Athlete.bib_number == athlete.bib_number,
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=400,
-            detail=f"Bib number {athlete.bib_number} already exists in this competition"
+            detail=(
+                f"Bib number {athlete.bib_number} already exists in this competition"
+            ),
         )
 
     new_athlete = Athlete(
@@ -354,13 +380,13 @@ async def update_athlete(
         existing = await db.execute(
             select(Athlete).where(
                 Athlete.competition_id == athlete.competition_id,
-                Athlete.bib_number == athlete_update.bib_number
+                Athlete.bib_number == athlete_update.bib_number,
             )
         )
         if existing.scalar_one_or_none():
             raise HTTPException(
                 status_code=400,
-                detail=f"Bib number {athlete_update.bib_number} already exists"
+                detail=f"Bib number {athlete_update.bib_number} already exists",
             )
 
     for field, value in athlete_update.model_dump(exclude_unset=True).items():
@@ -389,7 +415,9 @@ async def delete_athlete(
     return {"message": "Athlete deleted successfully"}
 
 
-@router.post("/competitions/{competition_id}/athletes/import", response_model=AthleteImportResult)
+@router.post(
+    "/competitions/{competition_id}/athletes/import", response_model=AthleteImportResult
+)
 async def import_athletes_csv(
     competition_id: int,
     file: UploadFile = File(...),
@@ -441,7 +469,7 @@ async def import_athletes_csv(
             existing = await db.execute(
                 select(Athlete).where(
                     Athlete.competition_id == competition_id,
-                    Athlete.bib_number == bib_number
+                    Athlete.bib_number == bib_number,
                 )
             )
             if existing.scalar_one_or_none():
@@ -481,6 +509,7 @@ async def import_athletes_csv(
 
 
 # ============== WODs ==============
+
 
 @router.get("/competitions/{competition_id}/wods", response_model=WODListResponse)
 async def list_wods(
@@ -545,9 +574,7 @@ async def create_wod(
 
     # Load standards
     result = await db.execute(
-        select(WOD)
-        .where(WOD.id == new_wod.id)
-        .options(selectinload(WOD.standards))
+        select(WOD).where(WOD.id == new_wod.id).options(selectinload(WOD.standards))
     )
     return result.scalar_one()
 
@@ -562,9 +589,7 @@ async def get_wod(
     Get a specific WOD.
     """
     result = await db.execute(
-        select(WOD)
-        .where(WOD.id == wod_id)
-        .options(selectinload(WOD.standards))
+        select(WOD).where(WOD.id == wod_id).options(selectinload(WOD.standards))
     )
     wod = result.scalar_one_or_none()
     if not wod:
@@ -594,9 +619,7 @@ async def update_wod(
 
     # Reload with standards
     result = await db.execute(
-        select(WOD)
-        .where(WOD.id == wod_id)
-        .options(selectinload(WOD.standards))
+        select(WOD).where(WOD.id == wod_id).options(selectinload(WOD.standards))
     )
     return result.scalar_one()
 
@@ -621,7 +644,12 @@ async def delete_wod(
 
 # ============== WOD Standards ==============
 
-@router.post("/wods/{wod_id}/standards", response_model=WODStandardResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/wods/{wod_id}/standards",
+    response_model=WODStandardResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def add_wod_standard(
     wod_id: int,
     standard: WODStandardCreate,
@@ -639,14 +667,13 @@ async def add_wod_standard(
     # Check if standard for this division exists
     existing = await db.execute(
         select(WODStandard).where(
-            WODStandard.wod_id == wod_id,
-            WODStandard.division == standard.division
+            WODStandard.wod_id == wod_id, WODStandard.division == standard.division
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=400,
-            detail=f"Standard for division {standard.division} already exists"
+            detail=f"Standard for division {standard.division} already exists",
         )
 
     new_standard = WODStandard(
@@ -673,8 +700,7 @@ async def delete_wod_standard(
     """
     result = await db.execute(
         select(WODStandard).where(
-            WODStandard.id == standard_id,
-            WODStandard.wod_id == wod_id
+            WODStandard.id == standard_id, WODStandard.wod_id == wod_id
         )
     )
     standard = result.scalar_one_or_none()
@@ -686,6 +712,7 @@ async def delete_wod_standard(
 
 
 # ============== Dashboard ==============
+
 
 @router.get("/competitions/{competition_id}/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(
@@ -736,8 +763,7 @@ async def get_dashboard_stats(
         # Pending scores
         pending_result = await db.execute(
             select(func.count()).where(
-                Score.wod_id.in_(wod_ids),
-                Score.status == "pending"
+                Score.wod_id.in_(wod_ids), Score.status == "pending"
             )
         )
         scores_pending = pending_result.scalar()
@@ -745,8 +771,7 @@ async def get_dashboard_stats(
         # Verified scores
         verified_result = await db.execute(
             select(func.count()).where(
-                Score.wod_id.in_(wod_ids),
-                Score.status == "verified"
+                Score.wod_id.in_(wod_ids), Score.status == "verified"
             )
         )
         scores_verified = verified_result.scalar()
@@ -771,6 +796,7 @@ async def get_dashboard_stats(
 
 # ============== Scoring ==============
 
+
 @router.post("/competitions/{competition_id}/recalculate")
 async def recalculate_scores(
     competition_id: int,
@@ -792,7 +818,4 @@ async def recalculate_scores(
 
     updated = await recalculate_competition_scores(db, competition_id)
 
-    return {
-        "message": f"Recalculated {updated} scores",
-        "updated_count": updated
-    }
+    return {"message": f"Recalculated {updated} scores", "updated_count": updated}

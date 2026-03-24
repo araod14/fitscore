@@ -9,10 +9,10 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from config import DATABASE_URL_SYNC, DIVISIONS, WODTypes
-from database import Base
-from models import User, Competition, Athlete, WOD, WODStandard, Score, ScoreAuditLog
 from auth import get_password_hash
+from config import DATABASE_URL_SYNC, WODTypes
+from database import Base
+from models import WOD, Athlete, Competition, Score, User, WODStandard
 
 # Create sync engine and session
 engine = create_engine(DATABASE_URL_SYNC)
@@ -74,14 +74,16 @@ def seed_database():
         db.add(viewer)
 
         db.commit()
-        print(f"  Created 4 users")
+        print("  Created 4 users")
 
         # ============== Create Competition ==============
         print("Creating competition...")
 
         competition = Competition(
             name="Copa Box Championship 2025",
-            description="Competencia regional de CrossFit con atletas de toda la region",
+            description=(
+                "Competencia regional de CrossFit con atletas de toda la region"
+            ),
             date=date.today() + timedelta(days=7),
             location="CrossFit Central Box",
             is_active=True,
@@ -111,7 +113,9 @@ def seed_database():
             },
             {
                 "name": "AMRAP Madness",
-                "description": "12 min AMRAP: 5 Deadlifts + 10 Box Jumps + 15 Wall Balls",
+                "description": (
+                    "12 min AMRAP: 5 Deadlifts + 10 Box Jumps + 15 Wall Balls"
+                ),
                 "wod_type": WODTypes.AMRAP,
                 "time_cap": 720,  # 12 minutes
                 "order": 3,
@@ -166,34 +170,121 @@ def seed_database():
                     db.add(standard)
 
         db.commit()
-        print(f"  Added WOD standards")
+        print("  Added WOD standards")
 
         # ============== Create Athletes ==============
         print("Creating athletes...")
 
         # Names for generating athletes
         male_names = [
-            "Carlos", "Miguel", "Juan", "Pedro", "Luis", "Diego", "Andres", "Fernando",
-            "Ricardo", "Eduardo", "Alejandro", "Sebastian", "Daniel", "Pablo", "Mateo",
-            "Jorge", "Martin", "Nicolas", "David", "Gabriel", "Roberto", "Javier", "Oscar",
-            "Adrian", "Ivan", "Hugo", "Mario", "Sergio", "Manuel", "Rafael"
+            "Carlos",
+            "Miguel",
+            "Juan",
+            "Pedro",
+            "Luis",
+            "Diego",
+            "Andres",
+            "Fernando",
+            "Ricardo",
+            "Eduardo",
+            "Alejandro",
+            "Sebastian",
+            "Daniel",
+            "Pablo",
+            "Mateo",
+            "Jorge",
+            "Martin",
+            "Nicolas",
+            "David",
+            "Gabriel",
+            "Roberto",
+            "Javier",
+            "Oscar",
+            "Adrian",
+            "Ivan",
+            "Hugo",
+            "Mario",
+            "Sergio",
+            "Manuel",
+            "Rafael",
         ]
         female_names = [
-            "Maria", "Ana", "Carmen", "Laura", "Sofia", "Isabella", "Valentina", "Lucia",
-            "Camila", "Paula", "Andrea", "Diana", "Gabriela", "Victoria", "Natalia",
-            "Elena", "Rosa", "Teresa", "Patricia", "Monica", "Carolina", "Alejandra",
-            "Daniela", "Mariana", "Fernanda", "Paola", "Lorena", "Sandra", "Gloria", "Julia"
+            "Maria",
+            "Ana",
+            "Carmen",
+            "Laura",
+            "Sofia",
+            "Isabella",
+            "Valentina",
+            "Lucia",
+            "Camila",
+            "Paula",
+            "Andrea",
+            "Diana",
+            "Gabriela",
+            "Victoria",
+            "Natalia",
+            "Elena",
+            "Rosa",
+            "Teresa",
+            "Patricia",
+            "Monica",
+            "Carolina",
+            "Alejandra",
+            "Daniela",
+            "Mariana",
+            "Fernanda",
+            "Paola",
+            "Lorena",
+            "Sandra",
+            "Gloria",
+            "Julia",
         ]
         last_names = [
-            "Garcia", "Rodriguez", "Martinez", "Lopez", "Gonzalez", "Hernandez", "Perez",
-            "Sanchez", "Ramirez", "Torres", "Flores", "Rivera", "Gomez", "Diaz", "Cruz",
-            "Morales", "Ortiz", "Gutierrez", "Chavez", "Ramos", "Vargas", "Castillo",
-            "Jimenez", "Mendoza", "Ruiz", "Alvarez", "Romero", "Medina", "Aguilar", "Castro"
+            "Garcia",
+            "Rodriguez",
+            "Martinez",
+            "Lopez",
+            "Gonzalez",
+            "Hernandez",
+            "Perez",
+            "Sanchez",
+            "Ramirez",
+            "Torres",
+            "Flores",
+            "Rivera",
+            "Gomez",
+            "Diaz",
+            "Cruz",
+            "Morales",
+            "Ortiz",
+            "Gutierrez",
+            "Chavez",
+            "Ramos",
+            "Vargas",
+            "Castillo",
+            "Jimenez",
+            "Mendoza",
+            "Ruiz",
+            "Alvarez",
+            "Romero",
+            "Medina",
+            "Aguilar",
+            "Castro",
         ]
         boxes = [
-            "CrossFit Central", "CrossFit Norte", "CrossFit Sur", "Box Fitness Elite",
-            "Functional Training", "CrossFit Power", "Box Warriors", "CrossFit Evolution",
-            "Garage Box", "CrossFit United", None, None  # Some athletes might not have a box
+            "CrossFit Central",
+            "CrossFit Norte",
+            "CrossFit Sur",
+            "Box Fitness Elite",
+            "Functional Training",
+            "CrossFit Power",
+            "Box Warriors",
+            "CrossFit Evolution",
+            "Garage Box",
+            "CrossFit United",
+            None,
+            None,  # Some athletes might not have a box
         ]
 
         athletes = []
@@ -201,11 +292,16 @@ def seed_database():
 
         # Create 5 athletes per division (50 total)
         active_divisions = [
-            "RX Masculino", "RX Femenino",
-            "Scaled Masculino", "Scaled Femenino",
-            "Master +40 Masculino", "Master +40 Femenino",
-            "Master +50 Masculino", "Master +50 Femenino",
-            "Teen Masculino", "Teen Femenino"
+            "RX Masculino",
+            "RX Femenino",
+            "Scaled Masculino",
+            "Scaled Femenino",
+            "Master +40 Masculino",
+            "Master +40 Femenino",
+            "Master +50 Masculino",
+            "Master +50 Femenino",
+            "Teen Masculino",
+            "Teen Femenino",
         ]
 
         for division in active_divisions:
@@ -226,7 +322,9 @@ def seed_database():
                     age = random.randint(18, 39)
 
                 birth_year = date.today().year - age
-                birth_date = date(birth_year, random.randint(1, 12), random.randint(1, 28))
+                birth_date = date(
+                    birth_year, random.randint(1, 12), random.randint(1, 28)
+                )
 
                 first_name = random.choice(male_names if is_male else female_names)
                 last_name = random.choice(last_names)
@@ -269,7 +367,9 @@ def seed_database():
                     if random.random() < 0.9:
                         if wod.wod_type == WODTypes.TIME:
                             # Generate time between 3 and 14 minutes
-                            raw_result = random.randint(180, min(wod.time_cap - 60, 840))
+                            raw_result = random.randint(
+                                180, min(wod.time_cap - 60, 840)
+                            )
                             result_type = "RX" if random.random() > 0.2 else "Scaled"
                         elif wod.wod_type == WODTypes.AMRAP:
                             # Generate reps between 100 and 250
@@ -295,10 +395,15 @@ def seed_database():
                         wod_id=wod.id,
                         raw_result=raw_result,
                         result_type=result_type,
-                        tiebreak=random.randint(30, 300) if wod.wod_type == WODTypes.AMRAP and raw_result else None,
+                        tiebreak=(
+                            random.randint(30, 300)
+                            if wod.wod_type == WODTypes.AMRAP and raw_result
+                            else None
+                        ),
                         status="verified" if random.random() > 0.3 else "pending",
                         judge_id=random.choice([judge1.id, judge2.id]),
-                        submitted_at=datetime.utcnow() - timedelta(hours=random.randint(1, 48)),
+                        submitted_at=datetime.utcnow()
+                        - timedelta(hours=random.randint(1, 48)),
                     )
                     db.add(score)
                     scores_created += 1
@@ -312,7 +417,9 @@ def seed_database():
         # For each WOD, calculate rankings
         for wod in wods:
             # Get all scores for this WOD grouped by division
-            wod_scores = db.query(Score).join(Athlete).filter(Score.wod_id == wod.id).all()
+            wod_scores = (
+                db.query(Score).join(Athlete).filter(Score.wod_id == wod.id).all()
+            )
 
             # Group by division
             scores_by_div = {}
@@ -326,14 +433,26 @@ def seed_database():
             # Calculate rankings for each division
             for div, div_scores in scores_by_div.items():
                 # Sort scores
-                valid_scores = [s for s in div_scores if s.result_type not in ["DNF", "DNS"] and s.raw_result is not None]
-                invalid_scores = [s for s in div_scores if s.result_type in ["DNF", "DNS"] or s.raw_result is None]
+                valid_scores = [
+                    s
+                    for s in div_scores
+                    if s.result_type not in ["DNF", "DNS"] and s.raw_result is not None
+                ]
+                invalid_scores = [
+                    s
+                    for s in div_scores
+                    if s.result_type in ["DNF", "DNS"] or s.raw_result is None
+                ]
 
                 # Sort based on WOD type
                 if wod.wod_type == WODTypes.TIME:
-                    valid_scores.sort(key=lambda s: (s.raw_result, s.tiebreak or float('inf')))
+                    valid_scores.sort(
+                        key=lambda s: (s.raw_result, s.tiebreak or float("inf"))
+                    )
                 else:  # Higher is better
-                    valid_scores.sort(key=lambda s: (-s.raw_result, s.tiebreak or float('inf')))
+                    valid_scores.sort(
+                        key=lambda s: (-s.raw_result, s.tiebreak or float("inf"))
+                    )
 
                 # Assign ranks and points
                 total_athletes = len(div_scores)
@@ -341,8 +460,11 @@ def seed_database():
 
                 for i, score in enumerate(valid_scores):
                     if i > 0:
-                        prev = valid_scores[i-1]
-                        if score.raw_result != prev.raw_result or score.tiebreak != prev.tiebreak:
+                        prev = valid_scores[i - 1]
+                        if (
+                            score.raw_result != prev.raw_result
+                            or score.tiebreak != prev.tiebreak
+                        ):
                             current_rank = i + 1
                     score.rank = current_rank
                     score.points = total_athletes - current_rank + 1
@@ -356,9 +478,9 @@ def seed_database():
         print("  Rankings calculated")
 
         # ============== Summary ==============
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("SEED COMPLETED SUCCESSFULLY!")
-        print("="*50)
+        print("=" * 50)
         print("\nTest Credentials:")
         print("  Admin:  admin / admin123")
         print("  Judge1: judge1 / judge123")
@@ -374,7 +496,7 @@ def seed_database():
         print("  uvicorn main:app --reload")
         print("  or: python main.py")
         print("\nAccess at: http://localhost:8000")
-        print("="*50)
+        print("=" * 50)
 
 
 if __name__ == "__main__":

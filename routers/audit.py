@@ -6,14 +6,14 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
 
-from database import get_db
-from models import User, ScoreAuditLog, Score, Athlete, WOD
-from schemas import AuditLogResponse, AuditLogListResponse
 from auth import get_current_admin
+from database import get_db
+from models import WOD, Score, ScoreAuditLog, User
+from schemas import AuditLogListResponse, AuditLogResponse
 
 router = APIRouter(prefix="/api/audit", tags=["Audit"])
 
@@ -69,20 +69,24 @@ async def list_audit_logs(
     # Build response
     items = []
     for log in logs:
-        items.append(AuditLogResponse(
-            id=log.id,
-            score_id=log.score_id,
-            action=log.action,
-            old_value=log.old_value,
-            new_value=log.new_value,
-            user_id=log.user_id,
-            username=log.user.username if log.user else None,
-            timestamp=log.timestamp,
-            ip_address=log.ip_address,
-            reason=log.reason,
-            athlete_name=log.score.athlete.name if log.score and log.score.athlete else None,
-            wod_name=log.score.wod.name if log.score and log.score.wod else None,
-        ))
+        items.append(
+            AuditLogResponse(
+                id=log.id,
+                score_id=log.score_id,
+                action=log.action,
+                old_value=log.old_value,
+                new_value=log.new_value,
+                user_id=log.user_id,
+                username=log.user.username if log.user else None,
+                timestamp=log.timestamp,
+                ip_address=log.ip_address,
+                reason=log.reason,
+                athlete_name=(
+                    log.score.athlete.name if log.score and log.score.athlete else None
+                ),
+                wod_name=log.score.wod.name if log.score and log.score.wod else None,
+            )
+        )
 
     return AuditLogListResponse(items=items, total=total)
 
@@ -117,20 +121,22 @@ async def get_score_audit_history(
 
     items = []
     for log in logs:
-        items.append(AuditLogResponse(
-            id=log.id,
-            score_id=log.score_id,
-            action=log.action,
-            old_value=log.old_value,
-            new_value=log.new_value,
-            user_id=log.user_id,
-            username=log.user.username if log.user else None,
-            timestamp=log.timestamp,
-            ip_address=log.ip_address,
-            reason=log.reason,
-            athlete_name=score.athlete.name if score.athlete else None,
-            wod_name=score.wod.name if score.wod else None,
-        ))
+        items.append(
+            AuditLogResponse(
+                id=log.id,
+                score_id=log.score_id,
+                action=log.action,
+                old_value=log.old_value,
+                new_value=log.new_value,
+                user_id=log.user_id,
+                username=log.user.username if log.user else None,
+                timestamp=log.timestamp,
+                ip_address=log.ip_address,
+                reason=log.reason,
+                athlete_name=score.athlete.name if score.athlete else None,
+                wod_name=score.wod.name if score.wod else None,
+            )
+        )
 
     return AuditLogListResponse(items=items, total=len(items))
 
@@ -175,20 +181,24 @@ async def get_user_audit_history(
 
     items = []
     for log in logs:
-        items.append(AuditLogResponse(
-            id=log.id,
-            score_id=log.score_id,
-            action=log.action,
-            old_value=log.old_value,
-            new_value=log.new_value,
-            user_id=log.user_id,
-            username=user.username,
-            timestamp=log.timestamp,
-            ip_address=log.ip_address,
-            reason=log.reason,
-            athlete_name=log.score.athlete.name if log.score and log.score.athlete else None,
-            wod_name=log.score.wod.name if log.score and log.score.wod else None,
-        ))
+        items.append(
+            AuditLogResponse(
+                id=log.id,
+                score_id=log.score_id,
+                action=log.action,
+                old_value=log.old_value,
+                new_value=log.new_value,
+                user_id=log.user_id,
+                username=user.username,
+                timestamp=log.timestamp,
+                ip_address=log.ip_address,
+                reason=log.reason,
+                athlete_name=(
+                    log.score.athlete.name if log.score and log.score.athlete else None
+                ),
+                wod_name=log.score.wod.name if log.score and log.score.wod else None,
+            )
+        )
 
     return AuditLogListResponse(items=items, total=total)
 
@@ -205,8 +215,8 @@ async def get_audit_stats(
     base_query = select(ScoreAuditLog)
 
     if competition_id:
-        base_query = base_query.join(Score).join(WOD).where(
-            WOD.competition_id == competition_id
+        base_query = (
+            base_query.join(Score).join(WOD).where(WOD.competition_id == competition_id)
         )
 
     # Total actions
@@ -216,9 +226,8 @@ async def get_audit_stats(
     total = total_result.scalar()
 
     # Actions by type
-    actions_query = (
-        select(ScoreAuditLog.action, func.count())
-        .group_by(ScoreAuditLog.action)
+    actions_query = select(ScoreAuditLog.action, func.count()).group_by(
+        ScoreAuditLog.action
     )
     if competition_id:
         actions_query = (
@@ -232,9 +241,8 @@ async def get_audit_stats(
     actions_by_type = {row[0]: row[1] for row in actions_result.all()}
 
     # Actions by user (top 10)
-    users_query = (
-        select(User.username, func.count())
-        .join(ScoreAuditLog, ScoreAuditLog.user_id == User.id)
+    users_query = select(User.username, func.count()).join(
+        ScoreAuditLog, ScoreAuditLog.user_id == User.id
     )
     if competition_id:
         users_query = (
@@ -244,7 +252,9 @@ async def get_audit_stats(
             .join(WOD, Score.wod_id == WOD.id)
             .where(WOD.competition_id == competition_id)
         )
-    users_query = users_query.group_by(User.username).order_by(func.count().desc()).limit(10)
+    users_query = (
+        users_query.group_by(User.username).order_by(func.count().desc()).limit(10)
+    )
     users_result = await db.execute(users_query)
     actions_by_user = {row[0]: row[1] for row in users_result.all()}
 

@@ -3,18 +3,16 @@ Leaderboard router for public competition results.
 """
 
 from datetime import datetime
-from typing import Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models import Competition, WOD, Athlete
+from models import WOD, Athlete, Competition
 from schemas import CompetitionLeaderboard, DivisionLeaderboard, LeaderboardEntry
-from scoring import get_competition_leaderboard, get_division_leaderboard, format_result
-from config import WODTypes
+from scoring import format_result, get_competition_leaderboard, get_division_leaderboard
 
 router = APIRouter(prefix="/api/leaderboard", tags=["Leaderboard"])
 
@@ -44,20 +42,24 @@ async def get_full_leaderboard(
     for division, entries in sorted(leaderboards.items()):
         division_entries = []
         for entry in entries:
-            division_entries.append(LeaderboardEntry(
-                rank=entry.rank,
-                athlete_id=entry.athlete_id,
-                athlete_name=entry.athlete_name,
-                bib_number=entry.bib_number,
-                box=entry.box,
-                division=entry.division,
-                total_points=entry.total_points,
-                wod_scores=entry.wod_scores,
-            ))
-        divisions.append(DivisionLeaderboard(
-            division=division,
-            entries=division_entries,
-        ))
+            division_entries.append(
+                LeaderboardEntry(
+                    rank=entry.rank,
+                    athlete_id=entry.athlete_id,
+                    athlete_name=entry.athlete_name,
+                    bib_number=entry.bib_number,
+                    box=entry.box,
+                    division=entry.division,
+                    total_points=entry.total_points,
+                    wod_scores=entry.wod_scores,
+                )
+            )
+        divisions.append(
+            DivisionLeaderboard(
+                division=division,
+                entries=division_entries,
+            )
+        )
 
     return CompetitionLeaderboard(
         competition_id=competition.id,
@@ -180,7 +182,6 @@ async def get_athlete_results(
         .order_by(WOD.order_in_competition)
     )
     wods = wods_result.scalars().all()
-    wod_map = {w.id: w for w in wods}
 
     # Build scores list
     scores_by_wod = {s.wod_id: s for s in athlete.scores}
@@ -192,29 +193,33 @@ async def get_athlete_results(
         if score:
             total_points += score.points or 0
             formatted = format_result(score.raw_result, wod.wod_type, score.result_type)
-            results.append({
-                "wod_id": wod.id,
-                "wod_name": wod.name,
-                "wod_type": wod.wod_type,
-                "rank": score.rank,
-                "points": score.points,
-                "result": formatted,
-                "raw_result": score.raw_result,
-                "result_type": score.result_type,
-                "tiebreak": score.tiebreak,
-            })
+            results.append(
+                {
+                    "wod_id": wod.id,
+                    "wod_name": wod.name,
+                    "wod_type": wod.wod_type,
+                    "rank": score.rank,
+                    "points": score.points,
+                    "result": formatted,
+                    "raw_result": score.raw_result,
+                    "result_type": score.result_type,
+                    "tiebreak": score.tiebreak,
+                }
+            )
         else:
-            results.append({
-                "wod_id": wod.id,
-                "wod_name": wod.name,
-                "wod_type": wod.wod_type,
-                "rank": None,
-                "points": 0,
-                "result": "-",
-                "raw_result": None,
-                "result_type": None,
-                "tiebreak": None,
-            })
+            results.append(
+                {
+                    "wod_id": wod.id,
+                    "wod_name": wod.name,
+                    "wod_type": wod.wod_type,
+                    "rank": None,
+                    "points": 0,
+                    "result": "-",
+                    "raw_result": None,
+                    "result_type": None,
+                    "tiebreak": None,
+                }
+            )
 
     return {
         "athlete_id": athlete.id,
@@ -253,23 +258,25 @@ async def get_competition_summary(
         "competition_name": competition.name,
         "date": competition.date.isoformat(),
         "location": competition.location,
-        "divisions": []
+        "divisions": [],
     }
 
     for division, entries in sorted(leaderboards.items()):
         top3 = entries[:3]
-        summary["divisions"].append({
-            "division": division,
-            "top_athletes": [
-                {
-                    "rank": e.rank,
-                    "name": e.athlete_name,
-                    "bib_number": e.bib_number,
-                    "box": e.box,
-                    "total_points": e.total_points,
-                }
-                for e in top3
-            ]
-        })
+        summary["divisions"].append(
+            {
+                "division": division,
+                "top_athletes": [
+                    {
+                        "rank": e.rank,
+                        "name": e.athlete_name,
+                        "bib_number": e.bib_number,
+                        "box": e.box,
+                        "total_points": e.total_points,
+                    }
+                    for e in top3
+                ],
+            }
+        )
 
     return summary

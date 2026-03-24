@@ -2,20 +2,29 @@
 Alembic migration environment configuration.
 """
 
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
-
 # Import models and database configuration
 import sys
+from logging.config import fileConfig
 from pathlib import Path
+
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from config import DATABASE_URL_SYNC
-from database import Base
-from models import User, Competition, Athlete, WOD, WODStandard, Score, ScoreAuditLog
+from config import DATABASE_URL_SYNC  # noqa: E402
+from database import Base  # noqa: E402
+from models import (  # noqa: E402, F401
+    WOD,
+    Athlete,
+    Competition,
+    Score,
+    ScoreAuditLog,
+    User,
+    WODStandard,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

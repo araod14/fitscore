@@ -2,14 +2,15 @@
 Pydantic schemas for request/response validation.
 """
 
-from datetime import datetime, date
-from typing import Optional, List
-from pydantic import BaseModel, Field, EmailStr, field_validator
+from datetime import date, datetime
+from typing import List, Optional
 
-from config import DIVISIONS, GENDERS, WOD_TYPES, SCORE_STATUSES, ROLES
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from config import DIVISIONS, GENDERS, ROLES, SCORE_STATUSES, WOD_TYPES
 
 # ============== User Schemas ==============
+
 
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
@@ -71,6 +72,7 @@ class TokenData(BaseModel):
 
 # ============== Competition Schemas ==============
 
+
 class CompetitionBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = None
@@ -108,6 +110,7 @@ class CompetitionListResponse(BaseModel):
 
 
 # ============== Athlete Schemas ==============
+
 
 class AthleteBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -199,6 +202,7 @@ class AthleteImportResult(BaseModel):
 
 # ============== WOD Schemas ==============
 
+
 class WODStandardBase(BaseModel):
     division: str
     rx_weight_kg: Optional[float] = None
@@ -277,6 +281,7 @@ class WODListResponse(BaseModel):
 
 # ============== Score Schemas ==============
 
+
 class ScoreBase(BaseModel):
     raw_result: Optional[float] = None
     result_type: str = Field(default="RX")
@@ -352,6 +357,7 @@ class ScoreBulkCreate(BaseModel):
 
 # ============== Leaderboard Schemas ==============
 
+
 class LeaderboardEntry(BaseModel):
     rank: int
     athlete_id: int
@@ -376,6 +382,7 @@ class CompetitionLeaderboard(BaseModel):
 
 
 # ============== Audit Schemas ==============
+
 
 class AuditLogResponse(BaseModel):
     id: int
@@ -412,6 +419,7 @@ class AuditLogFilter(BaseModel):
 
 # ============== Export Schemas ==============
 
+
 class ExportRequest(BaseModel):
     competition_id: int
     divisions: Optional[List[str]] = None  # None = all divisions
@@ -427,6 +435,7 @@ class ExportRequest(BaseModel):
 
 
 # ============== Dashboard Schemas ==============
+
 
 class DashboardStats(BaseModel):
     total_athletes: int
@@ -444,6 +453,7 @@ class JudgeDashboard(BaseModel):
 
 
 # ============== Time Conversion Helpers ==============
+
 
 def seconds_to_time_str(seconds: Optional[float]) -> str:
     """Convert seconds to mm:ss format."""

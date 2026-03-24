@@ -7,31 +7,30 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Form
+from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.cors import CORSMiddleware
 
-from config import APP_NAME, APP_VERSION, DEBUG
-from database import create_tables, get_db
 from auth import (
-    get_current_user,
     authenticate_user,
     create_access_token,
+    get_current_user,
 )
-from models import User, Competition
+from config import APP_NAME, APP_VERSION, DEBUG
+from database import create_tables, get_db
+from models import Competition, User
 from routers import (
-    auth_router,
     admin_router,
-    scores_router,
-    leaderboard_router,
     audit_router,
+    auth_router,
     export_router,
+    leaderboard_router,
+    scores_router,
 )
-
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 
 @asynccontextmanager
@@ -95,6 +94,7 @@ app.include_router(export_router)
 
 
 # ============== HTML Routes ==============
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home(
@@ -165,6 +165,7 @@ async def logout():
 
 # ============== Admin Routes ==============
 
+
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
@@ -205,7 +206,9 @@ async def admin_competition_detail(
     if not user or user.role != "admin":
         return RedirectResponse(url="/login", status_code=302)
 
-    return RedirectResponse(url=f"/admin/athletes?competition={competition_id}", status_code=302)
+    return RedirectResponse(
+        url=f"/admin/athletes?competition={competition_id}", status_code=302
+    )
 
 
 @app.get("/admin/athletes", response_class=HTMLResponse)
@@ -255,6 +258,7 @@ async def admin_audit(
 
 # ============== Judge Routes ==============
 
+
 @app.get("/judge", response_class=HTMLResponse)
 async def judge_dashboard(
     request: Request,
@@ -294,17 +298,16 @@ async def judge_score_entry(
 
 # ============== Public Routes ==============
 
+
 @app.get("/leaderboard", response_class=HTMLResponse)
 async def leaderboard_selector(
     request: Request,
     user: Optional[User] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Leaderboard page - shows competition selector or redirects to active competition."""
+    """Leaderboard page - shows competition selector or redirects to active."""
     # Check for active competition
-    result = await db.execute(
-        select(Competition).where(Competition.is_active == True).limit(1)
-    )
+    result = await db.execute(select(Competition).where(Competition.is_active).limit(1))
     active_comp = result.scalar_one_or_none()
 
     if active_comp:
@@ -345,6 +348,7 @@ async def leaderboard_competition(
 
 
 # ============== Health Check ==============
+
 
 @app.get("/health")
 async def health_check():

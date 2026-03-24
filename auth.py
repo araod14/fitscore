@@ -3,16 +3,16 @@ Authentication and authorization module with JWT support.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional, Annotated
+from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, Roles
+from config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, SECRET_KEY, Roles
 from database import get_db
 from models import User
 from schemas import TokenData
@@ -76,7 +76,9 @@ async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
     return result.scalar_one_or_none()
 
 
-async def authenticate_user(db: AsyncSession, username: str, password: str) -> Optional[User]:
+async def authenticate_user(
+    db: AsyncSession, username: str, password: str
+) -> Optional[User]:
     """Authenticate a user with username and password."""
     user = await get_user_by_username(db, username)
     if not user:
@@ -91,7 +93,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str) -> O
 async def get_current_user(
     request: Request,
     token: Annotated[Optional[str], Depends(oauth2_scheme)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """
     Get the current user from JWT token.
@@ -118,7 +120,7 @@ async def get_current_user(
 
 
 async def get_current_user_required(
-    current_user: Annotated[Optional[User], Depends(get_current_user)]
+    current_user: Annotated[Optional[User], Depends(get_current_user)],
 ) -> User:
     """
     Require a valid authenticated user.
@@ -134,7 +136,7 @@ async def get_current_user_required(
 
 
 async def get_current_admin(
-    current_user: Annotated[User, Depends(get_current_user_required)]
+    current_user: Annotated[User, Depends(get_current_user_required)],
 ) -> User:
     """
     Require an admin user.
@@ -149,7 +151,7 @@ async def get_current_admin(
 
 
 async def get_current_judge_or_admin(
-    current_user: Annotated[User, Depends(get_current_user_required)]
+    current_user: Annotated[User, Depends(get_current_user_required)],
 ) -> User:
     """
     Require a judge or admin user.
@@ -168,8 +170,9 @@ def require_roles(*roles: str):
     Dependency factory for requiring specific roles.
     Usage: Depends(require_roles(Roles.ADMIN, Roles.JUDGE))
     """
+
     async def role_checker(
-        current_user: Annotated[User, Depends(get_current_user_required)]
+        current_user: Annotated[User, Depends(get_current_user_required)],
     ) -> User:
         if current_user.role not in roles:
             raise HTTPException(
@@ -177,6 +180,7 @@ def require_roles(*roles: str):
                 detail=f"One of these roles required: {', '.join(roles)}",
             )
         return current_user
+
     return role_checker
 
 
@@ -186,7 +190,7 @@ async def create_user(
     password: str,
     email: Optional[str] = None,
     full_name: Optional[str] = None,
-    role: str = Roles.VIEWER
+    role: str = Roles.VIEWER,
 ) -> User:
     """Create a new user."""
     # Check if username exists

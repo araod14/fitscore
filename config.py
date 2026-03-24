@@ -3,7 +3,6 @@ FitScore Configuration - Constants and settings for CrossFit competition managem
 """
 
 import os
-from datetime import timedelta
 
 # Application Settings
 APP_NAME = "FitScore"
@@ -19,11 +18,13 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fitscore-secret-key-change-in-production-2
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
+
 # User Roles
 class Roles:
     ADMIN = "admin"
     JUDGE = "judge"
     VIEWER = "viewer"
+
 
 ROLES = [Roles.ADMIN, Roles.JUDGE, Roles.VIEWER]
 
@@ -58,14 +59,16 @@ CATEGORIES = [
 # Genders
 GENDERS = ["Masculino", "Femenino"]
 
+
 # WOD Types
 class WODTypes:
-    TIME = "time"           # Lower is better (mm:ss format)
-    AMRAP = "amrap"         # Higher reps is better
-    LOAD = "load"           # Higher weight is better (kg)
-    REPS = "reps"           # Higher is better
-    CALORIES = "calories"   # Higher is better
-    DISTANCE = "distance"   # Higher is better (meters)
+    TIME = "time"  # Lower is better (mm:ss format)
+    AMRAP = "amrap"  # Higher reps is better
+    LOAD = "load"  # Higher weight is better (kg)
+    REPS = "reps"  # Higher is better
+    CALORIES = "calories"  # Higher is better
+    DISTANCE = "distance"  # Higher is better (meters)
+
 
 WOD_TYPES = [
     WODTypes.TIME,
@@ -86,13 +89,16 @@ WOD_TYPE_LABELS = {
     WODTypes.DISTANCE: "Distance (m)",
 }
 
+
 # Score Status
 class ScoreStatus:
     PENDING = "pending"
     VERIFIED = "verified"
     DISPUTED = "disputed"
 
+
 SCORE_STATUSES = [ScoreStatus.PENDING, ScoreStatus.VERIFIED, ScoreStatus.DISPUTED]
+
 
 # Audit Actions
 class AuditActions:
@@ -100,6 +106,7 @@ class AuditActions:
     UPDATE = "update"
     DELETE = "delete"
     VERIFY = "verify"
+
 
 AUDIT_ACTIONS = [
     AuditActions.CREATE,

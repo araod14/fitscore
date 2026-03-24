@@ -3,7 +3,7 @@ FitScore Algorithm - CrossFit competition scoring system.
 
 Scoring Rules:
 - Athletes are ranked within their division for each WOD
-- Points are awarded based on rank: 1st place = N points (where N = total athletes), last = 1 point
+- Points are awarded based on rank: 1st = N points (N = total athletes), last = 1
 - Ties: same rank, same points, next position skipped
 - DNF/DNS = 0 points
 - Final FitScore = sum of all WOD points
@@ -11,18 +11,20 @@ Scoring Rules:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Dict, List, Optional, Tuple
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from config import WODTypes
-from models import Score, Athlete, WOD, Competition
+from models import WOD, Athlete, Score
 
 
 @dataclass
 class WODScore:
     """Represents an athlete's score for a single WOD."""
+
     athlete_id: int
     wod_id: int
     raw_result: Optional[float]
@@ -35,6 +37,7 @@ class WODScore:
 @dataclass
 class AthleteTotal:
     """Represents an athlete's total score across all WODs."""
+
     athlete_id: int
     athlete_name: str
     bib_number: str
@@ -48,6 +51,7 @@ class AthleteTotal:
 @dataclass
 class LeaderboardEntry:
     """A single entry in the leaderboard."""
+
     rank: int
     athlete_id: int
     athlete_name: str
@@ -74,8 +78,7 @@ def is_higher_better(wod_type: str) -> bool:
 
 
 def calculate_wod_rankings(
-    scores: List[Score],
-    wod_type: str
+    scores: List[Score], wod_type: str
 ) -> List[Tuple[Score, int]]:
     """
     Calculate rankings for a list of scores in a WOD.
@@ -101,8 +104,16 @@ def calculate_wod_rankings(
     higher_better = is_higher_better(wod_type)
 
     def sort_key(s: Score) -> Tuple:
-        result = s.raw_result if s.raw_result is not None else float('inf' if not higher_better else '-inf')
-        tiebreak = s.tiebreak if s.tiebreak is not None else float('inf' if not higher_better else '-inf')
+        result = (
+            s.raw_result
+            if s.raw_result is not None
+            else float("inf" if not higher_better else "-inf")
+        )
+        tiebreak = (
+            s.tiebreak
+            if s.tiebreak is not None
+            else float("inf" if not higher_better else "-inf")
+        )
         # For time: lower is better, so no negation
         # For others: higher is better, so negate for ascending sort
         if higher_better:
@@ -136,9 +147,7 @@ def calculate_wod_rankings(
 
 
 def calculate_wod_points(
-    rank: int,
-    total_athletes: int,
-    is_dnf_dns: bool = False
+    rank: int, total_athletes: int, is_dnf_dns: bool = False
 ) -> float:
     """
     Calculate points for a given rank.
@@ -158,17 +167,13 @@ def calculate_wod_points(
 
 
 async def calculate_athlete_total(
-    db: AsyncSession,
-    athlete_id: int,
-    competition_id: int
+    db: AsyncSession, athlete_id: int, competition_id: int
 ) -> AthleteTotal:
     """
     Calculate total FitScore for a single athlete.
     """
     # Get athlete
-    athlete_result = await db.execute(
-        select(Athlete).where(Athlete.id == athlete_id)
-    )
+    athlete_result = await db.execute(select(Athlete).where(Athlete.id == athlete_id))
     athlete = athlete_result.scalar_one_or_none()
     if not athlete:
         raise ValueError(f"Athlete {athlete_id} not found")
@@ -206,9 +211,7 @@ async def calculate_athlete_total(
 
 
 async def get_division_leaderboard(
-    db: AsyncSession,
-    competition_id: int,
-    division: str
+    db: AsyncSession, competition_id: int, division: str
 ) -> List[LeaderboardEntry]:
     """
     Get leaderboard for a specific division.
@@ -275,7 +278,9 @@ async def get_division_leaderboard(
         When total points are tied, rank by most 1st-place WOD finishes,
         then most 2nd-place, etc. Final tiebreaker: bib number (ascending).
         """
-        wod_ranks = [ws.rank for ws in athlete_total.wod_results.values() if ws.rank > 0]
+        wod_ranks = [
+            ws.rank for ws in athlete_total.wod_results.values() if ws.rank > 0
+        ]
         max_rank = len(wods) + 1
         # Count how many times each rank was achieved (lower index = better rank)
         rank_counts = [0] * max_rank
@@ -301,43 +306,48 @@ async def get_division_leaderboard(
         for wod in wods:
             wod_result = athlete_total.wod_results.get(wod.id)
             if wod_result:
-                wod_scores.append({
-                    "wod_id": wod.id,
-                    "wod_name": wod.name,
-                    "rank": wod_result.rank,
-                    "points": wod_result.points,
-                    "result": wod_result.raw_result,
-                    "result_type": wod_result.result_type,
-                    "tiebreak": wod_result.tiebreak,
-                })
+                wod_scores.append(
+                    {
+                        "wod_id": wod.id,
+                        "wod_name": wod.name,
+                        "rank": wod_result.rank,
+                        "points": wod_result.points,
+                        "result": wod_result.raw_result,
+                        "result_type": wod_result.result_type,
+                        "tiebreak": wod_result.tiebreak,
+                    }
+                )
             else:
-                wod_scores.append({
-                    "wod_id": wod.id,
-                    "wod_name": wod.name,
-                    "rank": None,
-                    "points": 0,
-                    "result": None,
-                    "result_type": None,
-                    "tiebreak": None,
-                })
+                wod_scores.append(
+                    {
+                        "wod_id": wod.id,
+                        "wod_name": wod.name,
+                        "rank": None,
+                        "points": 0,
+                        "result": None,
+                        "result_type": None,
+                        "tiebreak": None,
+                    }
+                )
 
-        leaderboard.append(LeaderboardEntry(
-            rank=current_rank,
-            athlete_id=athlete_total.athlete_id,
-            athlete_name=athlete_total.athlete_name,
-            bib_number=athlete_total.bib_number,
-            box=athlete_total.box,
-            division=athlete_total.division,
-            total_points=athlete_total.total_points,
-            wod_scores=wod_scores,
-        ))
+        leaderboard.append(
+            LeaderboardEntry(
+                rank=current_rank,
+                athlete_id=athlete_total.athlete_id,
+                athlete_name=athlete_total.athlete_name,
+                bib_number=athlete_total.bib_number,
+                box=athlete_total.box,
+                division=athlete_total.division,
+                total_points=athlete_total.total_points,
+                wod_scores=wod_scores,
+            )
+        )
 
     return leaderboard
 
 
 async def get_competition_leaderboard(
-    db: AsyncSession,
-    competition_id: int
+    db: AsyncSession, competition_id: int
 ) -> Dict[str, List[LeaderboardEntry]]:
     """
     Get leaderboards for all divisions in a competition.
@@ -360,10 +370,7 @@ async def get_competition_leaderboard(
     return leaderboards
 
 
-async def recalculate_wod_scores(
-    db: AsyncSession,
-    wod_id: int
-) -> int:
+async def recalculate_wod_scores(db: AsyncSession, wod_id: int) -> int:
     """
     Recalculate rankings and points for all scores in a WOD.
     Groups by division for proper ranking.
@@ -377,9 +384,7 @@ async def recalculate_wod_scores(
 
     # Get all scores for this WOD with athlete info
     scores_result = await db.execute(
-        select(Score)
-        .where(Score.wod_id == wod_id)
-        .options(selectinload(Score.athlete))
+        select(Score).where(Score.wod_id == wod_id).options(selectinload(Score.athlete))
     )
     scores = scores_result.scalars().all()
 
@@ -416,10 +421,7 @@ async def recalculate_wod_scores(
     return updated_count
 
 
-async def recalculate_competition_scores(
-    db: AsyncSession,
-    competition_id: int
-) -> int:
+async def recalculate_competition_scores(db: AsyncSession, competition_id: int) -> int:
     """
     Recalculate all rankings and points for a competition.
     Returns total number of scores updated.
@@ -438,11 +440,7 @@ async def recalculate_competition_scores(
     return total_updated
 
 
-def format_result(
-    raw_result: Optional[float],
-    wod_type: str,
-    result_type: str
-) -> str:
+def format_result(raw_result: Optional[float], wod_type: str, result_type: str) -> str:
     """
     Format a raw result for display based on WOD type.
     """

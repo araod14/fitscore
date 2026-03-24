@@ -2,32 +2,49 @@
 SQLAlchemy ORM Models for FitScore application.
 """
 
-from datetime import datetime, date
-from typing import Optional, List
+from datetime import date, datetime
+from typing import List, Optional
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Date, Float,
-    ForeignKey, UniqueConstraint, Index, Boolean, Enum as SQLEnum
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from config import Roles, ScoreStatus
 from database import Base
-from config import Roles, WODTypes, ScoreStatus, AuditActions
 
 
 class User(Base):
     """User model for authentication and authorization."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
+    username: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
+    email: Mapped[Optional[str]] = mapped_column(
+        String(255), unique=True, nullable=True
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     role: Mapped[str] = mapped_column(String(20), default=Roles.VIEWER, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=datetime.utcnow
+    )
 
     # Relationships
     competitions_created: Mapped[List["Competition"]] = relationship(
@@ -49,6 +66,7 @@ class User(Base):
 
 class Competition(Base):
     """Competition/Event model."""
+
     __tablename__ = "competitions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -57,12 +75,20 @@ class Competition(Base):
     date: Mapped[date] = mapped_column(Date, nullable=False)
     location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.utcnow)
-    created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=datetime.utcnow
+    )
+    created_by: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
 
     # Relationships
-    creator: Mapped["User"] = relationship("User", back_populates="competitions_created")
+    creator: Mapped["User"] = relationship(
+        "User", back_populates="competitions_created"
+    )
     athletes: Mapped[List["Athlete"]] = relationship(
         "Athlete", back_populates="competition", cascade="all, delete-orphan"
     )
@@ -76,6 +102,7 @@ class Competition(Base):
 
 class Athlete(Base):
     """Athlete/Competitor model."""
+
     __tablename__ = "athletes"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -84,23 +111,35 @@ class Athlete(Base):
     birth_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     division: Mapped[str] = mapped_column(String(50), nullable=False)
-    box: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # CrossFit gym/box
+    box: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # CrossFit gym/box
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     bib_number: Mapped[str] = mapped_column(String(20), nullable=False)  # Dorsal number
-    competition_id: Mapped[int] = mapped_column(Integer, ForeignKey("competitions.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.utcnow)
+    competition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("competitions.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=datetime.utcnow
+    )
 
     # Relationships
-    competition: Mapped["Competition"] = relationship("Competition", back_populates="athletes")
+    competition: Mapped["Competition"] = relationship(
+        "Competition", back_populates="athletes"
+    )
     scores: Mapped[List["Score"]] = relationship(
         "Score", back_populates="athlete", cascade="all, delete-orphan"
     )
 
     # Constraints
     __table_args__ = (
-        UniqueConstraint("bib_number", "competition_id", name="uq_athlete_bib_competition"),
+        UniqueConstraint(
+            "bib_number", "competition_id", name="uq_athlete_bib_competition"
+        ),
         Index("ix_athlete_competition_division", "competition_id", "division"),
     )
 
@@ -110,8 +149,10 @@ class Athlete(Base):
         if not self.birth_date:
             return None
         today = date.today()
-        return today.year - self.birth_date.year - (
-            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+        return (
+            today.year
+            - self.birth_date.year
+            - ((today.month, today.day) < (self.birth_date.month, self.birth_date.day))
         )
 
     def __repr__(self):
@@ -120,20 +161,35 @@ class Athlete(Base):
 
 class WOD(Base):
     """Workout of the Day model."""
+
     __tablename__ = "wods"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    wod_type: Mapped[str] = mapped_column(String(20), nullable=False)  # time, amrap, load, reps, etc.
-    time_cap: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # in seconds
-    order_in_competition: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    competition_id: Mapped[int] = mapped_column(Integer, ForeignKey("competitions.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.utcnow)
+    wod_type: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # time, amrap, load, reps, etc.
+    time_cap: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )  # in seconds
+    order_in_competition: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )
+    competition_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("competitions.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, onupdate=datetime.utcnow
+    )
 
     # Relationships
-    competition: Mapped["Competition"] = relationship("Competition", back_populates="wods")
+    competition: Mapped["Competition"] = relationship(
+        "Competition", back_populates="wods"
+    )
     standards: Mapped[List["WODStandard"]] = relationship(
         "WODStandard", back_populates="wod", cascade="all, delete-orphan"
     )
@@ -161,6 +217,7 @@ class WOD(Base):
 
 class WODStandard(Base):
     """WOD standards per division (weights, movements, etc.)."""
+
     __tablename__ = "wod_standards"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -168,7 +225,9 @@ class WODStandard(Base):
     division: Mapped[str] = mapped_column(String(50), nullable=False)
     rx_weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     description_override: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
 
     # Relationships
     wod: Mapped["WOD"] = relationship("WOD", back_populates="standards")
@@ -184,10 +243,13 @@ class WODStandard(Base):
 
 class Score(Base):
     """Score/Result for an athlete in a WOD."""
+
     __tablename__ = "scores"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    athlete_id: Mapped[int] = mapped_column(Integer, ForeignKey("athletes.id"), nullable=False)
+    athlete_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("athletes.id"), nullable=False
+    )
     wod_id: Mapped[int] = mapped_column(Integer, ForeignKey("wods.id"), nullable=False)
 
     # Raw result - interpretation depends on WOD type
@@ -209,19 +271,29 @@ class Score(Base):
     points: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Status and verification
-    status: Mapped[str] = mapped_column(String(20), default=ScoreStatus.PENDING, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), default=ScoreStatus.PENDING, nullable=False
+    )
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Audit fields
-    judge_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    judge_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
     verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    verified_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+    verified_by: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
 
     # Relationships
     athlete: Mapped["Athlete"] = relationship("Athlete", back_populates="scores")
     wod: Mapped["WOD"] = relationship("WOD", back_populates="scores")
-    judge: Mapped["User"] = relationship("User", back_populates="scores_submitted", foreign_keys=[judge_id])
+    judge: Mapped["User"] = relationship(
+        "User", back_populates="scores_submitted", foreign_keys=[judge_id]
+    )
     verifier: Mapped[Optional["User"]] = relationship(
         "User", back_populates="scores_verified", foreign_keys=[verified_by]
     )
@@ -255,24 +327,33 @@ class Score(Base):
         if self.raw_result is None:
             return "-"
 
-        # This would need access to WOD type - should be used via a method that has WOD context
+        # Needs WOD context to format properly
         return str(self.raw_result)
 
     def __repr__(self):
-        return f"<Score Athlete:{self.athlete_id} WOD:{self.wod_id} Result:{self.raw_result}>"
+        return f"<Score A:{self.athlete_id} W:{self.wod_id} R:{self.raw_result}>"
 
 
 class ScoreAuditLog(Base):
     """Audit log for score changes."""
+
     __tablename__ = "score_audit_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    score_id: Mapped[int] = mapped_column(Integer, ForeignKey("scores.id"), nullable=False)
-    action: Mapped[str] = mapped_column(String(20), nullable=False)  # create, update, delete, verify
+    score_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("scores.id"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # create, update, delete, verify
     old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON string
     new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON string
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
@@ -287,4 +368,4 @@ class ScoreAuditLog(Base):
     )
 
     def __repr__(self):
-        return f"<ScoreAuditLog {self.action} Score:{self.score_id} by User:{self.user_id}>"
+        return f"<AuditLog {self.action} Score:{self.score_id} User:{self.user_id}>"

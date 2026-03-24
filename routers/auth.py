@@ -5,23 +5,23 @@ Authentication router for login, logout, and user management.
 from datetime import timedelta
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from models import User
-from schemas import Token, UserCreate, UserResponse, UserUpdate, UserLogin
 from auth import (
     authenticate_user,
     create_access_token,
-    get_current_user_required,
     get_current_admin,
+    get_current_user_required,
     get_password_hash,
     get_user_by_username,
 )
-from config import ACCESS_TOKEN_EXPIRE_MINUTES, Roles
+from config import ACCESS_TOKEN_EXPIRE_MINUTES
+from database import get_db
+from models import User
+from schemas import Token, UserCreate, UserLogin, UserResponse, UserUpdate
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 async def login(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Authenticate user and return JWT token.
@@ -46,7 +46,7 @@ async def login(
 
     access_token = create_access_token(
         data={"sub": str(user.id), "username": user.username, "role": user.role},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
     # Set cookie for browser sessions
@@ -63,9 +63,7 @@ async def login(
 
 @router.post("/login/json", response_model=Token)
 async def login_json(
-    response: Response,
-    credentials: UserLogin,
-    db: AsyncSession = Depends(get_db)
+    response: Response, credentials: UserLogin, db: AsyncSession = Depends(get_db)
 ):
     """
     Authenticate user with JSON body (alternative to form).
@@ -79,7 +77,7 @@ async def login_json(
 
     access_token = create_access_token(
         data={"sub": str(user.id), "username": user.username, "role": user.role},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
     response.set_cookie(
@@ -104,7 +102,7 @@ async def logout(response: Response):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: Annotated[User, Depends(get_current_user_required)]
+    current_user: Annotated[User, Depends(get_current_user_required)],
 ):
     """
     Get current authenticated user information.
@@ -116,7 +114,7 @@ async def get_current_user_info(
 async def update_current_user(
     user_update: UserUpdate,
     current_user: Annotated[User, Depends(get_current_user_required)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update current user's own information (limited fields).
@@ -136,10 +134,11 @@ async def update_current_user(
 
 # Admin-only user management endpoints
 
+
 @router.get("/users", response_model=List[UserResponse])
 async def list_users(
     current_user: Annotated[User, Depends(get_current_admin)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     List all users (admin only).
@@ -153,7 +152,7 @@ async def list_users(
 async def create_user(
     user_create: UserCreate,
     current_user: Annotated[User, Depends(get_current_admin)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create a new user (admin only).
@@ -183,7 +182,7 @@ async def create_user(
 async def get_user(
     user_id: int,
     current_user: Annotated[User, Depends(get_current_admin)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get a specific user (admin only).
@@ -203,7 +202,7 @@ async def update_user(
     user_id: int,
     user_update: UserUpdate,
     current_user: Annotated[User, Depends(get_current_admin)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Update a user (admin only).
@@ -236,7 +235,7 @@ async def update_user(
 async def delete_user(
     user_id: int,
     current_user: Annotated[User, Depends(get_current_admin)],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a user (admin only).

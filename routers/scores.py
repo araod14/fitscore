@@ -6,18 +6,22 @@ import json
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
 
-from database import get_db
-from models import User, Athlete, WOD, Score, ScoreAuditLog
-from schemas import (
-    ScoreCreate, ScoreUpdate, ScoreResponse, ScoreListResponse, ScoreBulkCreate
-)
-from auth import get_current_judge_or_admin, get_current_admin
+from auth import get_current_admin, get_current_judge_or_admin
 from config import AuditActions, ScoreStatus
+from database import get_db
+from models import WOD, Athlete, Score, ScoreAuditLog, User
+from schemas import (
+    ScoreBulkCreate,
+    ScoreCreate,
+    ScoreListResponse,
+    ScoreResponse,
+    ScoreUpdate,
+)
 from scoring import recalculate_wod_scores
 
 router = APIRouter(prefix="/api/scores", tags=["Scores"])
@@ -72,10 +76,7 @@ async def list_scores(
     """
     List scores with optional filters.
     """
-    query = select(Score).options(
-        selectinload(Score.athlete),
-        selectinload(Score.wod)
-    )
+    query = select(Score).options(selectinload(Score.athlete), selectinload(Score.wod))
 
     if wod_id:
         query = query.where(Score.wod_id == wod_id)
@@ -108,25 +109,27 @@ async def list_scores(
     # Build response with additional info
     items = []
     for score in scores:
-        items.append(ScoreResponse(
-            id=score.id,
-            athlete_id=score.athlete_id,
-            wod_id=score.wod_id,
-            raw_result=score.raw_result,
-            result_type=score.result_type,
-            tiebreak=score.tiebreak,
-            rank=score.rank,
-            points=score.points,
-            status=score.status,
-            notes=score.notes,
-            judge_id=score.judge_id,
-            submitted_at=score.submitted_at,
-            verified_at=score.verified_at,
-            verified_by=score.verified_by,
-            athlete_name=score.athlete.name if score.athlete else None,
-            athlete_bib=score.athlete.bib_number if score.athlete else None,
-            wod_name=score.wod.name if score.wod else None,
-        ))
+        items.append(
+            ScoreResponse(
+                id=score.id,
+                athlete_id=score.athlete_id,
+                wod_id=score.wod_id,
+                raw_result=score.raw_result,
+                result_type=score.result_type,
+                tiebreak=score.tiebreak,
+                rank=score.rank,
+                points=score.points,
+                status=score.status,
+                notes=score.notes,
+                judge_id=score.judge_id,
+                submitted_at=score.submitted_at,
+                verified_at=score.verified_at,
+                verified_by=score.verified_by,
+                athlete_name=score.athlete.name if score.athlete else None,
+                athlete_bib=score.athlete.bib_number if score.athlete else None,
+                wod_name=score.wod.name if score.wod else None,
+            )
+        )
 
     return ScoreListResponse(items=items, total=total)
 
@@ -150,9 +153,7 @@ async def create_score(
         raise HTTPException(status_code=404, detail="Athlete not found")
 
     # Validate WOD exists
-    wod_result = await db.execute(
-        select(WOD).where(WOD.id == score_data.wod_id)
-    )
+    wod_result = await db.execute(select(WOD).where(WOD.id == score_data.wod_id))
     wod = wod_result.scalar_one_or_none()
     if not wod:
         raise HTTPException(status_code=404, detail="WOD not found")
@@ -160,21 +161,18 @@ async def create_score(
     # Check athlete belongs to competition
     if athlete.competition_id != wod.competition_id:
         raise HTTPException(
-            status_code=400,
-            detail="Athlete does not belong to this competition"
+            status_code=400, detail="Athlete does not belong to this competition"
         )
 
     # Check for existing score
     existing_result = await db.execute(
         select(Score).where(
-            Score.athlete_id == score_data.athlete_id,
-            Score.wod_id == score_data.wod_id
+            Score.athlete_id == score_data.athlete_id, Score.wod_id == score_data.wod_id
         )
     )
     if existing_result.scalar_one_or_none():
         raise HTTPException(
-            status_code=400,
-            detail="Score already exists for this athlete and WOD"
+            status_code=400, detail="Score already exists for this athlete and WOD"
         )
 
     # Create score
@@ -194,7 +192,10 @@ async def create_score(
     # Create audit log
     client_ip = request.client.host if request.client else None
     await create_audit_log(
-        db, score.id, AuditActions.CREATE, current_user.id,
+        db,
+        score.id,
+        AuditActions.CREATE,
+        current_user.id,
         new_value=score_to_dict(score),
         ip_address=client_ip,
     )
@@ -307,7 +308,10 @@ async def update_score(
     # Create audit log
     client_ip = request.client.host if request.client else None
     await create_audit_log(
-        db, score.id, AuditActions.UPDATE, current_user.id,
+        db,
+        score.id,
+        AuditActions.UPDATE,
+        current_user.id,
         old_value=old_values,
         new_value=score_to_dict(score),
         ip_address=client_ip,
@@ -360,7 +364,10 @@ async def delete_score(
     # Create audit log before deletion
     client_ip = request.client.host if request.client else None
     await create_audit_log(
-        db, score.id, AuditActions.DELETE, current_user.id,
+        db,
+        score.id,
+        AuditActions.DELETE,
+        current_user.id,
         old_value=score_to_dict(score),
         ip_address=client_ip,
     )
@@ -403,7 +410,10 @@ async def verify_score(
     # Create audit log
     client_ip = request.client.host if request.client else None
     await create_audit_log(
-        db, score.id, AuditActions.VERIFY, current_user.id,
+        db,
+        score.id,
+        AuditActions.VERIFY,
+        current_user.id,
         old_value=old_values,
         new_value=score_to_dict(score),
         ip_address=client_ip,
@@ -432,7 +442,9 @@ async def verify_score(
     )
 
 
-@router.post("/bulk", response_model=List[ScoreResponse], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/bulk", response_model=List[ScoreResponse], status_code=status.HTTP_201_CREATED
+)
 async def bulk_create_scores(
     bulk_data: ScoreBulkCreate,
     request: Request,
@@ -455,9 +467,7 @@ async def bulk_create_scores(
         if not athlete:
             continue
 
-        wod_result = await db.execute(
-            select(WOD).where(WOD.id == score_data.wod_id)
-        )
+        wod_result = await db.execute(select(WOD).where(WOD.id == score_data.wod_id))
         wod = wod_result.scalar_one_or_none()
         if not wod:
             continue
@@ -466,7 +476,7 @@ async def bulk_create_scores(
         existing = await db.execute(
             select(Score).where(
                 Score.athlete_id == score_data.athlete_id,
-                Score.wod_id == score_data.wod_id
+                Score.wod_id == score_data.wod_id,
             )
         )
         if existing.scalar_one_or_none():
@@ -487,32 +497,37 @@ async def bulk_create_scores(
 
         # Audit log
         await create_audit_log(
-            db, score.id, AuditActions.CREATE, current_user.id,
+            db,
+            score.id,
+            AuditActions.CREATE,
+            current_user.id,
             new_value=score_to_dict(score),
             ip_address=client_ip,
         )
 
         wods_to_recalculate.add(score_data.wod_id)
 
-        created_scores.append(ScoreResponse(
-            id=score.id,
-            athlete_id=score.athlete_id,
-            wod_id=score.wod_id,
-            raw_result=score.raw_result,
-            result_type=score.result_type,
-            tiebreak=score.tiebreak,
-            rank=score.rank,
-            points=score.points,
-            status=score.status,
-            notes=score.notes,
-            judge_id=score.judge_id,
-            submitted_at=score.submitted_at,
-            verified_at=score.verified_at,
-            verified_by=score.verified_by,
-            athlete_name=athlete.name,
-            athlete_bib=athlete.bib_number,
-            wod_name=wod.name,
-        ))
+        created_scores.append(
+            ScoreResponse(
+                id=score.id,
+                athlete_id=score.athlete_id,
+                wod_id=score.wod_id,
+                raw_result=score.raw_result,
+                result_type=score.result_type,
+                tiebreak=score.tiebreak,
+                rank=score.rank,
+                points=score.points,
+                status=score.status,
+                notes=score.notes,
+                judge_id=score.judge_id,
+                submitted_at=score.submitted_at,
+                verified_at=score.verified_at,
+                verified_by=score.verified_by,
+                athlete_name=athlete.name,
+                athlete_bib=athlete.bib_number,
+                wod_name=wod.name,
+            )
+        )
 
     # Recalculate all affected WODs
     for wod_id in wods_to_recalculate:
@@ -531,10 +546,14 @@ async def search_athlete_for_scoring(
     """
     Search for an athlete by name or bib number for scoring.
     """
-    query = select(Athlete).where(
-        Athlete.competition_id == competition_id,
-        (Athlete.name.ilike(f"%{q}%")) | (Athlete.bib_number.ilike(f"%{q}%"))
-    ).limit(10)
+    query = (
+        select(Athlete)
+        .where(
+            Athlete.competition_id == competition_id,
+            (Athlete.name.ilike(f"%{q}%")) | (Athlete.bib_number.ilike(f"%{q}%")),
+        )
+        .limit(10)
+    )
 
     result = await db.execute(query)
     athletes = result.scalars().all()
