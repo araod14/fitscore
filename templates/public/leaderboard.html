@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - {{ competition.name if competition else 'FitScore' }}{% endblock %}
+
+{% block head %}
+<style>
+    @media print {
+        .tab-navigation { display: none !important; }
+        .division-content { display: block !important; page-break-after: always; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="leaderboardPage()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900" x-text="competition?.name || 'Leaderboard'"></h1>
+            <p class="text-gray-600">
+                <span x-text="formatDate(competition?.date)"></span>
+                <span x-show="competition?.location" x-text="' - ' + competition?.location"></span>
+            </p>
+        </div>
+        <div class="flex items-center space-x-4 no-print">
+            <!-- Auto-refresh toggle -->
+            <label class="flex items-center text-sm text-gray-600">
+                <input type="checkbox" x-model="autoRefresh" @change="toggleAutoRefresh()"
+                       class="mr-2 rounded text-primary-600 focus:ring-primary-500">
+                Auto-actualizar
+            </label>
+            <!-- Print button -->
+            <button @click="window.print()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+                <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                Imprimir
+            </button>
+        </div>
+    </div>
+
+    <!-- Competition Selector (if no specific competition) -->
+    <div x-show="!competitionId" class="mb-6 bg-white rounded-lg shadow p-4 no-print">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Competencia</label>
+        <select x-model="selectedCompetition" @change="loadLeaderboard()"
+                class="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <option value="">Seleccionar...</option>
+            <template x-for="comp in competitions" :key="comp.id">
+                <option :value="comp.id" x-text="comp.name"></option>
+            </template>
+        </select>
+    </div>
+
+    <!-- Division Tabs -->
+    <div x-show="divisions.length > 0" class="mb-6 no-print tab-navigation">
+        <div class="border-b border-gray-200">
+            <nav class="flex flex-wrap -mb-px" aria-label="Tabs">
+                <template x-for="div in divisions" :key="div">
+                    <button @click="selectedDivision = div"
+                            :class="selectedDivision === div ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm">
+                        <span x-text="div"></span>
+                    </button>
+                </template>
+            </nav>
+        </div>
+    </div>
+
+    <!-- WODs Header -->
+    <div x-show="wods.length > 0" class="mb-4 bg-white rounded-lg shadow p-4">
+        <div class="grid gap-2" :style="'grid-template-columns: 60px 1fr 80px repeat(' + wods.length + ', 100px)'">
+            <div class="text-xs font-medium text-gray-500 uppercase">Pos</div>
+            <div class="text-xs font-medium text-gray-500 uppercase">Atleta</div>
+            <div class="text-xs font-medium text-gray-500 uppercase text-center">Total</div>
+            <template x-for="wod in wods" :key="wod.id">
+                <div class="text-xs font-medium text-gray-500 uppercase text-center">
+                    <span x-text="wod.name"></span>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div x-show="currentLeaderboard.length > 0" class="space-y-2">
+        <template x-for="entry in currentLeaderboard" :key="entry.athlete_id">
+            <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
+                 :class="{ 'ring-2 ring-yellow-400': entry.rank === 1, 'ring-2 ring-gray-400': entry.rank === 2, 'ring-2 ring-amber-700': entry.rank === 3 }">
+                <div class="grid gap-2 items-center" :style="'grid-template-columns: 60px 1fr 80px repeat(' + wods.length + ', 100px)'">
+                    <!-- Rank -->
+                    <div class="flex items-center justify-center">
+                        <span :class="{
+                            'text-white': entry.rank <= 3,
+                            'bg-gray-100 text-gray-600': entry.rank > 3
+                        }" :style="entry.rank === 1 ? 'background: linear-gradient(135deg, #f6d860, #d4a017); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : entry.rank === 2 ? 'background: linear-gradient(135deg, #e8e8e8, #a8a8a8); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : entry.rank === 3 ? 'background: linear-gradient(135deg, #d4845a, #8b4513); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : ''" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg">
+                            <span x-text="entry.rank"></span>
+                        </span>
+                    </div>
+
+                    <!-- Athlete Info -->
+                    <div>
+                        <div class="font-medium text-gray-900" x-text="entry.athlete_name"></div>
+                        <div class="text-sm text-gray-500">
+                            <span x-text="'#' + entry.bib_number"></span>
+                            <span x-show="entry.box" class="ml-2" x-text="entry.box"></span>
+                        </div>
+                    </div>
+
+                    <!-- Total Points -->
+                    <div class="text-center">
+                        <span class="text-xl font-bold text-primary-600" x-text="entry.total_points"></span>
+                        <span class="text-xs text-gray-500 block">pts</span>
+                    </div>
+
+                    <!-- WOD Scores -->
+                    <template x-for="wod in wods" :key="'score-' + wod.id">
+                        <div class="text-center">
+                            <template x-if="getWODScore(entry, wod.id)">
+                                <div>
+                                    <span class="font-medium" x-text="getWODScore(entry, wod.id).points"></span>
+                                    <span class="text-xs text-gray-400 block" x-text="formatResult(getWODScore(entry, wod.id), wod.wod_type)"></span>
+                                </div>
+                            </template>
+                            <template x-if="!getWODScore(entry, wod.id)">
+                                <span class="text-gray-300">-</span>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="currentLeaderboard.length === 0 && !loading" class="bg-white rounded-lg shadow p-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No hay resultados disponibles</h3>
+        <p class="mt-2 text-gray-500">Aun no se han registrado scores para esta division.</p>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="bg-white rounded-lg shadow p-8 text-center">
+        <svg class="animate-spin mx-auto h-8 w-8 text-primary-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="mt-4 text-gray-500">Cargando resultados...</p>
+    </div>
+
+    <!-- Last Update -->
+    <div x-show="lastUpdate" class="mt-6 text-center text-sm text-gray-500 no-print">
+        Ultima actualizacion: <span x-text="formatDateTime(lastUpdate)"></span>
+        <span x-show="autoRefresh" class="ml-2 text-green-600">(actualizacion automatica activa)</span>
+    </div>
+</div>
+
+<script>
+function leaderboardPage() {
+    return {
+        competitionId: {{ competition_id if competition_id else 'null' }},
+        selectedCompetition: {{ competition_id if competition_id else 'null' }},
+        competition: null,
+        competitions: [],
+        divisions: [],
+        selectedDivision: '',
+        wods: [],
+        leaderboard: {},
+        loading: false,
+        autoRefresh: true,
+        refreshInterval: null,
+        lastUpdate: null,
+
+        get currentLeaderboard() {
+            return this.leaderboard[this.selectedDivision] || [];
+        },
+
+        async init() {
+            if (!this.competitionId) {
+                await this.loadCompetitions();
+            } else {
+                this.selectedCompetition = this.competitionId;
+            }
+
+            if (this.selectedCompetition) {
+                await this.loadLeaderboard();
+            }
+
+            this.toggleAutoRefresh();
+        },
+
+        async loadCompetitions() {
+            try {
+                const res = await fetch('/api/admin/competitions?is_active=true');
+                const data = await res.json();
+                this.competitions = data.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async loadLeaderboard() {
+            if (!this.selectedCompetition) return;
+
+            this.loading = true;
+            try {
+                // Load competition info
+                const compRes = await fetch(`/api/admin/competitions/${this.selectedCompetition}`);
+                this.competition = await compRes.json();
+
+                // Load WODs
+                const wodsRes = await fetch(`/api/leaderboard/${this.selectedCompetition}/wods`);
+                this.wods = await wodsRes.json();
+
+                // Load divisions
+                const divsRes = await fetch(`/api/leaderboard/${this.selectedCompetition}/divisions`);
+                const divsData = await divsRes.json();
+                this.divisions = divsData.divisions || [];
+
+                // Select first division if none selected
+                if (!this.selectedDivision && this.divisions.length > 0) {
+                    this.selectedDivision = this.divisions[0];
+                }
+
+                // Load full leaderboard
+                const lbRes = await fetch(`/api/leaderboard/${this.selectedCompetition}`);
+                const lbData = await lbRes.json();
+
+                // Transform to dict by division
+                this.leaderboard = {};
+                for (const div of lbData.divisions || []) {
+                    this.leaderboard[div.division] = div.entries;
+                }
+
+                this.lastUpdate = new Date();
+
+            } catch (e) {
+                console.error('Error:', e);
+            }
+            this.loading = false;
+        },
+
+        toggleAutoRefresh() {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+                this.refreshInterval = null;
+            }
+
+            if (this.autoRefresh && this.selectedCompetition) {
+                this.refreshInterval = setInterval(() => {
+                    this.loadLeaderboard();
+                }, 30000); // 30 seconds
+            }
+        },
+
+        getWODScore(entry, wodId) {
+            return entry.wod_scores?.find(ws => ws.wod_id === wodId);
+        },
+
+        formatResult(score, wodType) {
+            if (!score || score.result === null) return '-';
+            if (score.result_type === 'DNF') return 'DNF';
+            if (score.result_type === 'DNS') return 'DNS';
+
+            if (wodType === 'time') {
+                const mins = Math.floor(score.result / 60);
+                const secs = Math.round(score.result % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+            if (wodType === 'load') {
+                return `${score.result}kg`;
+            }
+            return score.result;
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        },
+
+        formatDateTime(date) {
+            if (!date) return '';
+            return date.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+    }
+}
+</script>
+{% endblock %}

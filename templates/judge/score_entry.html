@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Score - FitScore{% endblock %}
+
+{% block content %}
+<div x-data="scoreEntry()" x-init="init()">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="/judge" class="text-primary-600 hover:text-primary-800 flex items-center">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Volver al panel
+        </a>
+    </div>
+
+    <!-- WOD Info -->
+    <div class="mb-6 bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <span class="bg-primary-100 text-primary-800 text-sm font-medium px-3 py-1 rounded" x-text="'WOD ' + (wod.order || '')"></span>
+                <h1 class="mt-2 text-2xl font-bold text-gray-900" x-text="wod.name || 'Cargando...'"></h1>
+                <p class="text-gray-600" x-text="getWODTypeLabel(wod.wod_type)"></p>
+                <p x-show="wod.time_cap_formatted" class="text-sm text-gray-500" x-text="'Time Cap: ' + wod.time_cap_formatted"></p>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-500">Scores registrados</p>
+                <p class="text-2xl font-bold text-primary-600" x-text="scoresCount"></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Score Entry Form -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Registrar Score</h2>
+
+            <!-- Athlete Search -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar Atleta *</label>
+                <div class="relative">
+                    <input type="text" x-model="searchQuery" @input.debounce.300ms="searchAthletes()"
+                           placeholder="Nombre o numero de dorsal..."
+                           class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <!-- Search Results -->
+                    <div x-show="searchResults.length > 0" class="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border max-h-60 overflow-y-auto">
+                        <template x-for="athlete in searchResults" :key="athlete.id">
+                            <button type="button" @click="selectAthlete(athlete)"
+                                    class="w-full text-left px-4 py-2 hover:bg-gray-100 flex justify-between items-center">
+                                <div>
+                                    <span class="font-medium" x-text="athlete.name"></span>
+                                    <span class="text-gray-500 text-sm ml-2" x-text="'#' + athlete.bib_number"></span>
+                                </div>
+                                <span class="text-xs text-gray-400" x-text="athlete.division"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Athlete -->
+            <div x-show="selectedAthlete" class="mb-4 p-4 bg-primary-50 rounded-md">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-medium text-primary-900" x-text="selectedAthlete?.name"></p>
+                        <p class="text-sm text-primary-700">
+                            <span x-text="'#' + selectedAthlete?.bib_number"></span>
+                            <span class="mx-1">|</span>
+                            <span x-text="selectedAthlete?.division"></span>
+                            <span x-show="selectedAthlete?.box" class="mx-1">|</span>
+                            <span x-text="selectedAthlete?.box"></span>
+                        </p>
+                    </div>
+                    <button @click="clearAthlete()" class="text-primary-600 hover:text-primary-800">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Type -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Resultado *</label>
+                <div class="flex space-x-4">
+                    <label class="flex items-center">
+                        <input type="radio" x-model="form.result_type" value="RX" class="text-primary-600 focus:ring-primary-500">
+                        <span class="ml-2 text-sm">RX</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" x-model="form.result_type" value="Scaled" class="text-primary-600 focus:ring-primary-500">
+                        <span class="ml-2 text-sm">Scaled</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" x-model="form.result_type" value="DNF" class="text-primary-600 focus:ring-primary-500">
+                        <span class="ml-2 text-sm">DNF</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" x-model="form.result_type" value="DNS" class="text-primary-600 focus:ring-primary-500">
+                        <span class="ml-2 text-sm">DNS</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Result Input (depends on WOD type) -->
+            <div x-show="form.result_type !== 'DNF' && form.result_type !== 'DNS'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1" x-text="getResultLabel()"></label>
+
+                <!-- Time Input -->
+                <div x-show="wod.wod_type === 'time'" class="flex space-x-2">
+                    <input type="number" x-model.number="timeMinutes" min="0" max="99" placeholder="mm"
+                           class="w-20 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <span class="text-2xl">:</span>
+                    <input type="number" x-model.number="timeSeconds" min="0" max="59" placeholder="ss"
+                           class="w-20 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                </div>
+
+                <!-- Number Input (for all other types) -->
+                <input x-show="wod.wod_type !== 'time'" type="number" x-model.number="form.raw_result"
+                       :step="wod.wod_type === 'load' ? '0.5' : '1'" min="0"
+                       :placeholder="getResultPlaceholder()"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            </div>
+
+            <!-- Tiebreak -->
+            <div x-show="wod.wod_type === 'amrap' && form.result_type !== 'DNF' && form.result_type !== 'DNS'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tiebreak (segundos)</label>
+                <input type="number" x-model.number="form.tiebreak" min="0" placeholder="Tiempo de tiebreak en segundos"
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+                <textarea x-model="form.notes" rows="2" placeholder="Observaciones adicionales..."
+                          class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"></textarea>
+            </div>
+
+            <!-- Error Message -->
+            <div x-show="error" class="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm" x-text="error"></div>
+
+            <!-- Success Message -->
+            <div x-show="success" class="mb-4 p-3 bg-green-100 text-green-700 rounded-md text-sm" x-text="success"></div>
+
+            <!-- Submit Button -->
+            <button @click="submitScore()" :disabled="!canSubmit || submitting"
+                    class="w-full px-4 py-3 bg-primary-600 text-white font-medium rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span x-show="!submitting">Registrar Score</span>
+                <span x-show="submitting">Guardando...</span>
+            </button>
+        </div>
+
+        <!-- Recent Scores for this WOD -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b">
+                <h2 class="text-lg font-medium text-gray-900">Scores Registrados</h2>
+            </div>
+            <div class="overflow-y-auto max-h-[600px]">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Dorsal</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Atleta</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Resultado</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-for="score in scores" :key="score.id">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-2 text-sm font-medium" x-text="score.athlete_bib"></td>
+                                <td class="px-4 py-2 text-sm" x-text="score.athlete_name"></td>
+                                <td class="px-4 py-2 text-sm">
+                                    <span x-text="formatScoreResult(score)"></span>
+                                    <span x-show="score.result_type !== 'RX'" class="text-xs text-gray-500 ml-1" x-text="score.result_type"></span>
+                                </td>
+                                <td class="px-4 py-2 text-sm font-medium text-primary-600" x-text="score.points || 0"></td>
+                            </tr>
+                        </template>
+                        <tr x-show="scores.length === 0">
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-500 text-sm">
+                                No hay scores registrados aun.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function scoreEntry() {
+    return {
+        competitionId: {{ competition_id }},
+        wodId: {{ wod_id }},
+        wod: {},
+        scores: [],
+        scoresCount: 0,
+        searchQuery: '',
+        searchResults: [],
+        selectedAthlete: null,
+        timeMinutes: null,
+        timeSeconds: null,
+        form: {
+            result_type: 'RX',
+            raw_result: null,
+            tiebreak: null,
+            notes: ''
+        },
+        submitting: false,
+        error: '',
+        success: '',
+
+        get canSubmit() {
+            if (!this.selectedAthlete) return false;
+            if (this.form.result_type === 'DNF' || this.form.result_type === 'DNS') return true;
+            if (this.wod.wod_type === 'time') {
+                return this.timeMinutes !== null || this.timeSeconds !== null;
+            }
+            return this.form.raw_result !== null && this.form.raw_result >= 0;
+        },
+
+        async init() {
+            await this.loadWOD();
+            await this.loadScores();
+        },
+
+        async loadWOD() {
+            try {
+                const res = await fetch(`/api/admin/wods/${this.wodId}`);
+                this.wod = await res.json();
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async loadScores() {
+            try {
+                const res = await fetch(`/api/scores?wod_id=${this.wodId}&limit=100`);
+                const data = await res.json();
+                this.scores = data.items || [];
+                this.scoresCount = data.total || 0;
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async searchAthletes() {
+            if (!this.searchQuery || this.searchQuery.length < 1) {
+                this.searchResults = [];
+                return;
+            }
+            try {
+                const res = await fetch(`/api/scores/search/athlete?competition_id=${this.competitionId}&q=${encodeURIComponent(this.searchQuery)}`);
+                this.searchResults = await res.json();
+            } catch (e) {
+                console.error('Error:', e);
+                this.searchResults = [];
+            }
+        },
+
+        selectAthlete(athlete) {
+            this.selectedAthlete = athlete;
+            this.searchQuery = '';
+            this.searchResults = [];
+        },
+
+        clearAthlete() {
+            this.selectedAthlete = null;
+            this.searchQuery = '';
+        },
+
+        async submitScore() {
+            this.error = '';
+            this.success = '';
+            this.submitting = true;
+
+            try {
+                // Calculate raw_result for time
+                let rawResult = this.form.raw_result;
+                if (this.wod.wod_type === 'time' && this.form.result_type !== 'DNF' && this.form.result_type !== 'DNS') {
+                    rawResult = (this.timeMinutes || 0) * 60 + (this.timeSeconds || 0);
+                }
+
+                const body = {
+                    athlete_id: this.selectedAthlete.id,
+                    wod_id: this.wodId,
+                    result_type: this.form.result_type,
+                    raw_result: this.form.result_type === 'DNF' || this.form.result_type === 'DNS' ? null : rawResult,
+                    tiebreak: this.form.tiebreak,
+                    notes: this.form.notes || null
+                };
+
+                const res = await fetch('/api/scores', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Error al guardar');
+                }
+
+                this.success = `Score registrado para ${this.selectedAthlete.name}`;
+
+                // Reset form
+                this.clearAthlete();
+                this.form = { result_type: 'RX', raw_result: null, tiebreak: null, notes: '' };
+                this.timeMinutes = null;
+                this.timeSeconds = null;
+
+                // Reload scores
+                await this.loadScores();
+
+                // Clear success after 3 seconds
+                setTimeout(() => { this.success = ''; }, 3000);
+
+            } catch (e) {
+                this.error = e.message;
+            }
+
+            this.submitting = false;
+        },
+
+        getWODTypeLabel(type) {
+            const labels = {
+                'time': 'For Time',
+                'amrap': 'AMRAP (Reps)',
+                'load': 'Max Load (kg)',
+                'reps': 'Max Reps',
+                'calories': 'Calories',
+                'distance': 'Distance (m)'
+            };
+            return labels[type] || type;
+        },
+
+        getResultLabel() {
+            const labels = {
+                'time': 'Tiempo (mm:ss)',
+                'amrap': 'Repeticiones',
+                'load': 'Peso (kg)',
+                'reps': 'Repeticiones',
+                'calories': 'Calorias',
+                'distance': 'Distancia (m)'
+            };
+            return labels[this.wod.wod_type] || 'Resultado';
+        },
+
+        getResultPlaceholder() {
+            const placeholders = {
+                'amrap': 'ej: 150',
+                'load': 'ej: 100.5',
+                'reps': 'ej: 50',
+                'calories': 'ej: 200',
+                'distance': 'ej: 5000'
+            };
+            return placeholders[this.wod.wod_type] || '';
+        },
+
+        formatScoreResult(score) {
+            if (score.result_type === 'DNF') return 'DNF';
+            if (score.result_type === 'DNS') return 'DNS';
+            if (score.raw_result === null) return '-';
+
+            if (this.wod.wod_type === 'time') {
+                const mins = Math.floor(score.raw_result / 60);
+                const secs = Math.round(score.raw_result % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+            if (this.wod.wod_type === 'load') {
+                return `${score.raw_result} kg`;
+            }
+            return score.raw_result;
+        }
+    }
+}
+</script>
+{% endblock %}

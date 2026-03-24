@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Juez - FitScore{% endblock %}
+
+{% block content %}
+<div x-data="judgeDashboard()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Panel de Juez</h1>
+        <p class="text-gray-600">Ingresa y gestiona scores de atletas</p>
+    </div>
+
+    <!-- Competition Selector -->
+    <div class="mb-6 bg-white rounded-lg shadow p-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Competencia Activa</label>
+        <select x-model="selectedCompetition" @change="loadWODs()"
+                class="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <option value="">Seleccionar competencia...</option>
+            <template x-for="comp in competitions" :key="comp.id">
+                <option :value="comp.id" x-text="comp.name"></option>
+            </template>
+        </select>
+    </div>
+
+    <!-- WODs Selection -->
+    <div x-show="selectedCompetition" class="mb-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">Selecciona un WOD para registrar scores</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="wod in wods" :key="wod.id">
+                <a :href="'/judge/score/' + selectedCompetition + '/' + wod.id"
+                   class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow border-2 border-transparent hover:border-primary-500">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded" x-text="'WOD ' + wod.order"></span>
+                            <h3 class="mt-2 text-lg font-medium text-gray-900" x-text="wod.name"></h3>
+                            <p class="text-sm text-gray-500" x-text="getWODTypeLabel(wod.wod_type)"></p>
+                            <p x-show="wod.time_cap_formatted" class="text-sm text-gray-400" x-text="'Time Cap: ' + wod.time_cap_formatted"></p>
+                        </div>
+                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </div>
+                </a>
+            </template>
+        </div>
+    </div>
+
+    <!-- Recent Scores -->
+    <div x-show="selectedCompetition" class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b">
+            <h2 class="text-lg font-medium text-gray-900">Scores Recientes</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Atleta</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">WOD</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Resultado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="score in recentScores" :key="score.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900" x-text="score.athlete_name"></div>
+                                <div class="text-sm text-gray-500" x-text="'#' + score.athlete_bib"></div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="score.wod_name"></td>
+                            <td class="px-6 py-4">
+                                <span class="font-medium" x-text="formatResult(score)"></span>
+                                <span x-show="score.result_type !== 'RX'" class="ml-1 text-xs text-gray-500" x-text="score.result_type"></span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span :class="getStatusClass(score.status)" class="px-2 py-1 text-xs font-semibold rounded-full" x-text="getStatusLabel(score.status)"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="formatDateTime(score.submitted_at)"></td>
+                        </tr>
+                    </template>
+                    <tr x-show="recentScores.length === 0">
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            No hay scores registrados aun.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- No Competition Selected -->
+    <div x-show="!selectedCompetition" class="bg-white rounded-lg shadow p-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No hay competencia seleccionada</h3>
+        <p class="mt-2 text-gray-500">Selecciona una competencia para comenzar a registrar scores.</p>
+    </div>
+</div>
+
+<script>
+function judgeDashboard() {
+    return {
+        competitions: [],
+        wods: [],
+        recentScores: [],
+        selectedCompetition: '',
+
+        async init() {
+            await this.loadCompetitions();
+            // Auto-select first active competition
+            const activeComp = this.competitions.find(c => c.is_active);
+            if (activeComp) {
+                this.selectedCompetition = activeComp.id;
+                await this.loadWODs();
+            }
+        },
+
+        async loadCompetitions() {
+            try {
+                const res = await fetch('/api/admin/competitions?is_active=true');
+                const data = await res.json();
+                this.competitions = data.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async loadWODs() {
+            if (!this.selectedCompetition) {
+                this.wods = [];
+                this.recentScores = [];
+                return;
+            }
+            try {
+                // Load WODs
+                const wodsRes = await fetch(`/api/leaderboard/${this.selectedCompetition}/wods`);
+                this.wods = await wodsRes.json();
+
+                // Load recent scores
+                const scoresRes = await fetch(`/api/scores?competition_id=${this.selectedCompetition}&limit=10`);
+                const scoresData = await scoresRes.json();
+                this.recentScores = scoresData.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        getWODTypeLabel(type) {
+            const labels = {
+                'time': 'For Time',
+                'amrap': 'AMRAP',
+                'load': 'Max Load',
+                'reps': 'Max Reps',
+                'calories': 'Calories',
+                'distance': 'Distance'
+            };
+            return labels[type] || type;
+        },
+
+        formatResult(score) {
+            if (score.result_type === 'DNF') return 'DNF';
+            if (score.result_type === 'DNS') return 'DNS';
+            if (score.raw_result === null) return '-';
+            return score.raw_result;
+        },
+
+        formatDateTime(dateStr) {
+            return new Date(dateStr).toLocaleString('es-ES', {
+                month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        },
+
+        getStatusLabel(status) {
+            const labels = {
+                'pending': 'Pendiente',
+                'verified': 'Verificado',
+                'disputed': 'Disputado'
+            };
+            return labels[status] || status;
+        },
+
+        getStatusClass(status) {
+            const classes = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'verified': 'bg-green-100 text-green-800',
+                'disputed': 'bg-red-100 text-red-800'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        }
+    }
+}
+</script>
+{% endblock %}

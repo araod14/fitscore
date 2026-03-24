@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+
+{% block title %}Atletas - Admin - FitScore{% endblock %}
+
+{% block content %}
+<div x-data="athletesPage()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Atletas</h1>
+            <p class="text-gray-600">Gestiona los atletas de la competencia</p>
+        </div>
+        <div class="flex space-x-2">
+            <button @click="showImportModal = true" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                Importar CSV
+            </button>
+            <button @click="openModal()" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
+                Nuevo Atleta
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-6 bg-white rounded-lg shadow p-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Competencia</label>
+                <select x-model="selectedCompetition" @change="loadAthletes()"
+                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="">Seleccionar...</option>
+                    <template x-for="comp in competitions" :key="comp.id">
+                        <option :value="comp.id" x-text="comp.name"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Division</label>
+                <select x-model="selectedDivision" @change="loadAthletes()"
+                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="">Todas</option>
+                    <template x-for="div in divisions" :key="div">
+                        <option :value="div" x-text="div"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+                <input type="text" x-model="searchQuery" @input.debounce.300ms="loadAthletes()" placeholder="Nombre o dorsal..."
+                       class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            </div>
+        </div>
+    </div>
+
+    <!-- Athletes Table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dorsal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Division</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Box</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Genero</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="athlete in athletes" :key="athlete.id">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium" x-text="athlete.bib_number"></td>
+                            <td class="px-6 py-4" x-text="athlete.name"></td>
+                            <td class="px-6 py-4 text-sm">
+                                <span class="px-2 py-1 bg-gray-100 rounded-full text-xs" x-text="athlete.division"></span>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="athlete.box || '-'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-500" x-text="athlete.gender"></td>
+                            <td class="px-6 py-4 text-right text-sm">
+                                <button @click="editAthlete(athlete)" class="text-primary-600 hover:text-primary-900 mr-2">Editar</button>
+                                <button @click="deleteAthlete(athlete.id)" class="text-red-600 hover:text-red-900">Eliminar</button>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="athletes.length === 0 && !loading && selectedCompetition">
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            No hay atletas registrados en esta competencia.
+                        </td>
+                    </tr>
+                    <tr x-show="!selectedCompetition">
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            Selecciona una competencia para ver los atletas.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div x-show="totalAthletes > 0" class="px-6 py-3 bg-gray-50 border-t text-sm text-gray-500">
+            Mostrando <span x-text="athletes.length"></span> de <span x-text="totalAthletes"></span> atletas
+        </div>
+    </div>
+
+    <!-- Athlete Modal -->
+    <div x-show="showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeModal()"></div>
+
+            <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <div class="px-6 py-4 border-b sticky top-0 bg-white">
+                    <h3 class="text-lg font-medium text-gray-900" x-text="editingId ? 'Editar Atleta' : 'Nuevo Atleta'"></h3>
+                </div>
+
+                <form @submit.prevent="saveAthlete()">
+                    <div class="px-6 py-4 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Nombre *</label>
+                                <input type="text" x-model="form.name" required
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Dorsal *</label>
+                                <input type="text" x-model="form.bib_number" required
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Genero *</label>
+                                <select x-model="form.gender" required
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Femenino">Femenino</option>
+                                </select>
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Division *</label>
+                                <select x-model="form.division" required
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                    <option value="">Seleccionar...</option>
+                                    <template x-for="div in divisions" :key="div">
+                                        <option :value="div" x-text="div"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fecha Nacimiento</label>
+                                <input type="date" x-model="form.birth_date"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Box</label>
+                                <input type="text" x-model="form.box"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Email</label>
+                                <input type="email" x-model="form.email"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Telefono</label>
+                                <input type="tel" x-model="form.phone"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+                        </div>
+
+                        <div x-show="error" class="p-3 bg-red-100 text-red-700 rounded-md text-sm" x-text="error"></div>
+                    </div>
+
+                    <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+                        <button type="button" @click="closeModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" :disabled="saving" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50">
+                            <span x-show="!saving" x-text="editingId ? 'Actualizar' : 'Crear'"></span>
+                            <span x-show="saving">Guardando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div x-show="showImportModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showImportModal = false"></div>
+
+            <div class="relative bg-white rounded-lg shadow-xl max-w-md w-full">
+                <div class="px-6 py-4 border-b">
+                    <h3 class="text-lg font-medium text-gray-900">Importar Atletas desde CSV</h3>
+                </div>
+
+                <form @submit.prevent="importCSV()">
+                    <div class="px-6 py-4 space-y-4">
+                        <p class="text-sm text-gray-500">
+                            El archivo CSV debe tener las columnas: name, gender, birth_date, division, box, bib_number
+                        </p>
+
+                        <div>
+                            <a :href="'/api/export/' + selectedCompetition + '/athletes/template'"
+                               class="text-primary-600 hover:text-primary-800 text-sm">
+                                Descargar plantilla CSV
+                            </a>
+                        </div>
+
+                        <div>
+                            <input type="file" accept=".csv" @change="importFile = $event.target.files[0]"
+                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+                        </div>
+
+                        <div x-show="importResult" class="p-3 rounded-md text-sm"
+                             :class="importResult.error_count > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'">
+                            <p>Importados: <span x-text="importResult.success_count"></span></p>
+                            <p x-show="importResult.error_count > 0">Errores: <span x-text="importResult.error_count"></span></p>
+                            <ul x-show="importResult.errors && importResult.errors.length > 0" class="mt-2 list-disc list-inside">
+                                <template x-for="err in importResult.errors.slice(0, 5)" :key="err">
+                                    <li x-text="err"></li>
+                                </template>
+                            </ul>
+                        </div>
+
+                        <div x-show="importError" class="p-3 bg-red-100 text-red-700 rounded-md text-sm" x-text="importError"></div>
+                    </div>
+
+                    <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+                        <button type="button" @click="showImportModal = false; importResult = null; importError = ''"
+                                class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cerrar
+                        </button>
+                        <button type="submit" :disabled="!importFile || importing || !selectedCompetition"
+                                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">
+                            <span x-show="!importing">Importar</span>
+                            <span x-show="importing">Importando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function athletesPage() {
+    return {
+        competitions: [],
+        athletes: [],
+        divisions: [
+            'RX Masculino', 'RX Femenino',
+            'Scaled Masculino', 'Scaled Femenino',
+            'Master +40 Masculino', 'Master +40 Femenino',
+            'Master +50 Masculino', 'Master +50 Femenino',
+            'Teen Masculino', 'Teen Femenino'
+        ],
+        selectedCompetition: '',
+        selectedDivision: '',
+        searchQuery: '',
+        totalAthletes: 0,
+        loading: false,
+        showModal: false,
+        showImportModal: false,
+        saving: false,
+        importing: false,
+        error: '',
+        importError: '',
+        importResult: null,
+        importFile: null,
+        editingId: null,
+        form: {
+            name: '', bib_number: '', gender: '', division: '',
+            birth_date: '', box: '', email: '', phone: ''
+        },
+
+        async init() {
+            await this.loadCompetitions();
+            // Auto-select first competition if available
+            if (this.competitions.length > 0) {
+                this.selectedCompetition = this.competitions[0].id;
+                await this.loadAthletes();
+            }
+        },
+
+        async loadCompetitions() {
+            try {
+                const res = await fetch('/api/admin/competitions');
+                const data = await res.json();
+                this.competitions = data.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async loadAthletes() {
+            if (!this.selectedCompetition) {
+                this.athletes = [];
+                return;
+            }
+            this.loading = true;
+            try {
+                let url = `/api/admin/competitions/${this.selectedCompetition}/athletes?`;
+                if (this.selectedDivision) url += `division=${encodeURIComponent(this.selectedDivision)}&`;
+                if (this.searchQuery) url += `search=${encodeURIComponent(this.searchQuery)}&`;
+
+                const res = await fetch(url);
+                const data = await res.json();
+                this.athletes = data.items || [];
+                this.totalAthletes = data.total || 0;
+            } catch (e) {
+                console.error('Error:', e);
+            }
+            this.loading = false;
+        },
+
+        openModal() {
+            if (!this.selectedCompetition) {
+                alert('Selecciona una competencia primero');
+                return;
+            }
+            this.editingId = null;
+            this.form = {
+                name: '', bib_number: '', gender: '', division: '',
+                birth_date: '', box: '', email: '', phone: '',
+                competition_id: this.selectedCompetition
+            };
+            this.error = '';
+            this.showModal = true;
+        },
+
+        editAthlete(athlete) {
+            this.editingId = athlete.id;
+            this.form = { ...athlete };
+            this.error = '';
+            this.showModal = true;
+        },
+
+        closeModal() {
+            this.showModal = false;
+            this.editingId = null;
+            this.error = '';
+        },
+
+        async saveAthlete() {
+            this.saving = true;
+            this.error = '';
+
+            try {
+                const url = this.editingId
+                    ? `/api/admin/athletes/${this.editingId}`
+                    : '/api/admin/athletes';
+                const method = this.editingId ? 'PUT' : 'POST';
+
+                const body = { ...this.form };
+                if (!this.editingId) {
+                    body.competition_id = parseInt(this.selectedCompetition);
+                }
+
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Error al guardar');
+                }
+
+                this.closeModal();
+                await this.loadAthletes();
+            } catch (e) {
+                this.error = e.message;
+            }
+            this.saving = false;
+        },
+
+        async deleteAthlete(id) {
+            if (!confirm('Estas seguro de eliminar este atleta?')) return;
+
+            try {
+                const res = await fetch(`/api/admin/athletes/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Error al eliminar');
+                await this.loadAthletes();
+            } catch (e) {
+                alert('Error al eliminar el atleta');
+            }
+        },
+
+        async importCSV() {
+            if (!this.importFile || !this.selectedCompetition) return;
+
+            this.importing = true;
+            this.importError = '';
+            this.importResult = null;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+
+                const res = await fetch(`/api/admin/competitions/${this.selectedCompetition}/athletes/import`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Error al importar');
+                }
+
+                this.importResult = await res.json();
+                await this.loadAthletes();
+            } catch (e) {
+                this.importError = e.message;
+            }
+            this.importing = false;
+        }
+    }
+}
+</script>
+{% endblock %}

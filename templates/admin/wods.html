@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}WODs - Admin - FitScore{% endblock %}
+
+{% block content %}
+<div x-data="wodsPage()" x-init="init()">
+    <!-- Header -->
+    <div class="mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">WODs</h1>
+            <p class="text-gray-600">Configura los workouts de la competencia</p>
+        </div>
+        <button @click="openModal()" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
+            Nuevo WOD
+        </button>
+    </div>
+
+    <!-- Competition Selector -->
+    <div class="mb-6 bg-white rounded-lg shadow p-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Competencia</label>
+        <select x-model="selectedCompetition" @change="loadWODs()"
+                class="w-full md:w-1/3 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+            <option value="">Seleccionar...</option>
+            <template x-for="comp in competitions" :key="comp.id">
+                <option :value="comp.id" x-text="comp.name"></option>
+            </template>
+        </select>
+    </div>
+
+    <!-- WODs List -->
+    <div class="space-y-4">
+        <template x-for="wod in wods" :key="wod.id">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-3">
+                            <span class="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded" x-text="'WOD ' + wod.order_in_competition"></span>
+                            <h3 class="text-lg font-medium text-gray-900" x-text="wod.name"></h3>
+                            <span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded" x-text="getWODTypeLabel(wod.wod_type)"></span>
+                        </div>
+                        <p x-show="wod.description" class="mt-2 text-sm text-gray-600" x-text="wod.description"></p>
+                        <p x-show="wod.time_cap" class="mt-1 text-sm text-gray-500">
+                            Time Cap: <span x-text="wod.time_cap_formatted || formatTimeCap(wod.time_cap)"></span>
+                        </p>
+
+                        <!-- Standards -->
+                        <div x-show="wod.standards && wod.standards.length > 0" class="mt-4">
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Standards por Division:</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="std in wod.standards" :key="std.id">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        <span x-text="std.division"></span>
+                                        <span x-show="std.rx_weight_kg" x-text="': ' + std.rx_weight_kg + 'kg'"></span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button @click="editWOD(wod)" class="text-primary-600 hover:text-primary-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button @click="deleteWOD(wod.id)" class="text-red-600 hover:text-red-900">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div x-show="wods.length === 0 && selectedCompetition && !loading" class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            No hay WODs configurados. Crea uno nuevo para comenzar.
+        </div>
+
+        <div x-show="!selectedCompetition" class="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            Selecciona una competencia para ver los WODs.
+        </div>
+    </div>
+
+    <!-- WOD Modal -->
+    <div x-show="showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="closeModal()"></div>
+
+            <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="px-6 py-4 border-b sticky top-0 bg-white z-10">
+                    <h3 class="text-lg font-medium text-gray-900" x-text="editingId ? 'Editar WOD' : 'Nuevo WOD'"></h3>
+                </div>
+
+                <form @submit.prevent="saveWOD()">
+                    <div class="px-6 py-4 space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Nombre *</label>
+                                <input type="text" x-model="form.name" required
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Tipo *</label>
+                                <select x-model="form.wod_type" required
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="time">For Time</option>
+                                    <option value="amrap">AMRAP (Reps)</option>
+                                    <option value="load">Max Load (kg)</option>
+                                    <option value="reps">Max Reps</option>
+                                    <option value="calories">Calories</option>
+                                    <option value="distance">Distance (m)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Orden</label>
+                                <input type="number" x-model.number="form.order_in_competition" min="1"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Time Cap (segundos)</label>
+                                <input type="number" x-model.number="form.time_cap" min="0"
+                                       class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                       placeholder="ej: 1200 para 20 min">
+                            </div>
+
+                            <div class="col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Descripcion</label>
+                                <textarea x-model="form.description" rows="3"
+                                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                          placeholder="Descripcion del WOD, movimientos, etc."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Standards Section -->
+                        <div class="border-t pt-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-medium text-gray-900">Standards por Division</h4>
+                                <button type="button" @click="addStandard()" class="text-sm text-primary-600 hover:text-primary-800">
+                                    + Agregar Standard
+                                </button>
+                            </div>
+
+                            <div class="space-y-3">
+                                <template x-for="(std, idx) in form.standards" :key="idx">
+                                    <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                                        <select x-model="std.division"
+                                                class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                            <option value="">Division...</option>
+                                            <template x-for="div in divisions" :key="div">
+                                                <option :value="div" x-text="div"></option>
+                                            </template>
+                                        </select>
+                                        <input type="number" x-model.number="std.rx_weight_kg" step="0.5" placeholder="Peso (kg)"
+                                               class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                                        <button type="button" @click="removeStandard(idx)" class="text-red-600 hover:text-red-800">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div x-show="error" class="p-3 bg-red-100 text-red-700 rounded-md text-sm" x-text="error"></div>
+                    </div>
+
+                    <div class="px-6 py-4 border-t bg-gray-50 flex justify-end space-x-3">
+                        <button type="button" @click="closeModal()" class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" :disabled="saving" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50">
+                            <span x-show="!saving" x-text="editingId ? 'Actualizar' : 'Crear'"></span>
+                            <span x-show="saving">Guardando...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function wodsPage() {
+    return {
+        competitions: [],
+        wods: [],
+        divisions: [
+            'RX Masculino', 'RX Femenino',
+            'Scaled Masculino', 'Scaled Femenino',
+            'Master +40 Masculino', 'Master +40 Femenino',
+            'Master +50 Masculino', 'Master +50 Femenino',
+            'Teen Masculino', 'Teen Femenino'
+        ],
+        selectedCompetition: '',
+        loading: false,
+        showModal: false,
+        saving: false,
+        error: '',
+        editingId: null,
+        form: {
+            name: '', wod_type: '', order_in_competition: 1,
+            time_cap: null, description: '', standards: []
+        },
+
+        async init() {
+            await this.loadCompetitions();
+            if (this.competitions.length > 0) {
+                this.selectedCompetition = this.competitions[0].id;
+                await this.loadWODs();
+            }
+        },
+
+        async loadCompetitions() {
+            try {
+                const res = await fetch('/api/admin/competitions');
+                const data = await res.json();
+                this.competitions = data.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        },
+
+        async loadWODs() {
+            if (!this.selectedCompetition) {
+                this.wods = [];
+                return;
+            }
+            this.loading = true;
+            try {
+                const res = await fetch(`/api/admin/competitions/${this.selectedCompetition}/wods`);
+                const data = await res.json();
+                this.wods = data.items || [];
+            } catch (e) {
+                console.error('Error:', e);
+            }
+            this.loading = false;
+        },
+
+        openModal() {
+            if (!this.selectedCompetition) {
+                alert('Selecciona una competencia primero');
+                return;
+            }
+            this.editingId = null;
+            this.form = {
+                name: '', wod_type: '', order_in_competition: this.wods.length + 1,
+                time_cap: null, description: '', standards: [],
+                competition_id: this.selectedCompetition
+            };
+            this.error = '';
+            this.showModal = true;
+        },
+
+        editWOD(wod) {
+            this.editingId = wod.id;
+            this.form = {
+                name: wod.name,
+                wod_type: wod.wod_type,
+                order_in_competition: wod.order_in_competition,
+                time_cap: wod.time_cap,
+                description: wod.description || '',
+                standards: (wod.standards || []).map(s => ({
+                    division: s.division,
+                    rx_weight_kg: s.rx_weight_kg
+                }))
+            };
+            this.error = '';
+            this.showModal = true;
+        },
+
+        closeModal() {
+            this.showModal = false;
+            this.editingId = null;
+            this.error = '';
+        },
+
+        addStandard() {
+            this.form.standards.push({ division: '', rx_weight_kg: null });
+        },
+
+        removeStandard(idx) {
+            this.form.standards.splice(idx, 1);
+        },
+
+        async saveWOD() {
+            this.saving = true;
+            this.error = '';
+
+            try {
+                const url = this.editingId
+                    ? `/api/admin/wods/${this.editingId}`
+                    : '/api/admin/wods';
+                const method = this.editingId ? 'PUT' : 'POST';
+
+                const body = { ...this.form };
+                if (!this.editingId) {
+                    body.competition_id = parseInt(this.selectedCompetition);
+                }
+                // Filter out empty standards
+                body.standards = body.standards.filter(s => s.division);
+
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Error al guardar');
+                }
+
+                this.closeModal();
+                await this.loadWODs();
+            } catch (e) {
+                this.error = e.message;
+            }
+            this.saving = false;
+        },
+
+        async deleteWOD(id) {
+            if (!confirm('Estas seguro de eliminar este WOD? Se eliminaran todos los scores asociados.')) return;
+
+            try {
+                const res = await fetch(`/api/admin/wods/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Error al eliminar');
+                await this.loadWODs();
+            } catch (e) {
+                alert('Error al eliminar el WOD');
+            }
+        },
+
+        getWODTypeLabel(type) {
+            const labels = {
+                'time': 'For Time',
+                'amrap': 'AMRAP',
+                'load': 'Max Load',
+                'reps': 'Max Reps',
+                'calories': 'Calories',
+                'distance': 'Distance'
+            };
+            return labels[type] || type;
+        },
+
+        formatTimeCap(seconds) {
+            if (!seconds) return '';
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+    }
+}
+</script>
+{% endblock %}

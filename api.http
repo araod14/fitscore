@@ -1,0 +1,416 @@
+### FitScore API Test File
+### Usar con REST Client (VS Code) o IntelliJ IDEA
+
+@baseUrl = http://localhost:8000
+@contentType = application/json
+
+### ============================================
+### HEALTH & STATUS
+### ============================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+### API Status
+GET {{baseUrl}}/api/status
+
+### ============================================
+### AUTHENTICATION
+### ============================================
+
+### Login (obtener token) - Admin
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=admin&password=admin123
+
+### Login JSON alternativo
+# @name loginJson
+POST {{baseUrl}}/api/auth/login/json
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Guardar token de la respuesta anterior
+@authToken = {{loginAdmin.response.body.access_token}}
+
+### Ver usuario actual
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{authToken}}
+
+### Listar usuarios (solo admin)
+GET {{baseUrl}}/api/auth/users
+Authorization: Bearer {{authToken}}
+
+### Crear nuevo usuario
+POST {{baseUrl}}/api/auth/users
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "username": "juez1",
+  "password": "juez123",
+  "email": "juez1@fitscore.com",
+  "full_name": "Juez Primero",
+  "role": "judge"
+}
+
+### ============================================
+### COMPETITIONS
+### ============================================
+
+### Listar competencias
+GET {{baseUrl}}/api/admin/competitions
+Authorization: Bearer {{authToken}}
+
+### Crear competencia
+POST {{baseUrl}}/api/admin/competitions
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "CrossFit Open 2024",
+  "date": "2024-03-15",
+  "location": "Box Central",
+  "description": "Competencia anual de CrossFit",
+  "is_active": true
+}
+
+### Ver competencia especifica
+GET {{baseUrl}}/api/admin/competitions/1
+Authorization: Bearer {{authToken}}
+
+### Actualizar competencia
+PUT {{baseUrl}}/api/admin/competitions/1
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "CrossFit Open 2024 - Actualizado",
+  "is_active": true
+}
+
+### Dashboard de competencia
+GET {{baseUrl}}/api/admin/competitions/1/dashboard
+Authorization: Bearer {{authToken}}
+
+### Recalcular rankings y puntos de una competencia
+POST {{baseUrl}}/api/admin/competitions/1/recalculate
+Authorization: Bearer {{authToken}}
+
+### ============================================
+### ATHLETES
+### ============================================
+
+### Listar atletas de competencia
+GET {{baseUrl}}/api/admin/competitions/1/athletes
+Authorization: Bearer {{authToken}}
+
+### Crear atleta
+POST {{baseUrl}}/api/admin/athletes
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "competition_id": 1,
+  "name": "Juan Perez",
+  "email": "juan@email.com",
+  "bib_number": "101",
+  "division": "RX Masculino",
+  "box": "CrossFit Norte",
+  "age": 28,
+  "gender": "M"
+}
+
+### Ver atleta
+GET {{baseUrl}}/api/admin/athletes/1
+Authorization: Bearer {{authToken}}
+
+### Actualizar atleta
+PUT {{baseUrl}}/api/admin/athletes/1
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Juan Perez Garcia",
+  "box": "CrossFit Sur"
+}
+
+### Descargar template CSV para importar atletas
+GET {{baseUrl}}/api/export/1/athletes/template
+Authorization: Bearer {{authToken}}
+
+### Importar atletas desde CSV (usar form-data)
+# POST {{baseUrl}}/api/admin/competitions/1/athletes/import
+# Authorization: Bearer {{authToken}}
+# Content-Type: multipart/form-data; boundary=boundary
+#
+# --boundary
+# Content-Disposition: form-data; name="file"; filename="atletas.csv"
+# Content-Type: text/csv
+#
+# name,email,bib_number,division,box,age,gender
+# Maria Lopez,maria@email.com,102,RX Femenino,Box Central,25,F
+# --boundary--
+
+### ============================================
+### WODs
+### ============================================
+
+### Listar WODs de competencia
+GET {{baseUrl}}/api/admin/competitions/1/wods
+Authorization: Bearer {{authToken}}
+
+### Crear WOD tipo TIME (For Time)
+POST {{baseUrl}}/api/admin/wods
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "competition_id": 1,
+  "name": "WOD 5 - Fran",
+  "description": "21-15-9 Thrusters y Pull-ups",
+  "wod_type": "TIME",
+  "time_cap": 600,
+  "order_in_competition": 5
+}
+
+### Crear WOD tipo AMRAP
+POST {{baseUrl}}/api/admin/wods
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "competition_id": 1,
+  "name": "WOD 6 - AMRAP 12",
+  "description": "12 min AMRAP: 10 Box Jumps, 10 KB Swings",
+  "wod_type": "AMRAP",
+  "time_cap": 720,
+  "order_in_competition": 6
+}
+
+### Crear WOD tipo LOAD (max weight)
+POST {{baseUrl}}/api/admin/wods
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "competition_id": 1,
+  "name": "WOD 7 - Max Clean",
+  "description": "Encontrar 1RM Clean",
+  "wod_type": "LOAD",
+  "time_cap": 900,
+  "order_in_competition": 7
+}
+
+### Ver WOD
+GET {{baseUrl}}/api/admin/wods/1
+Authorization: Bearer {{authToken}}
+
+### Actualizar WOD
+PUT {{baseUrl}}/api/admin/wods/1
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "WOD 1 - Actualizado",
+  "description": "Descripcion actualizada"
+}
+
+### Agregar standard por division a WOD
+POST {{baseUrl}}/api/admin/wods/1/standards
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "division": "RX Masculino",
+  "description": "Peso: 95/65 lb, Pull-ups estrictos"
+}
+
+### ============================================
+### SCORES
+### ============================================
+
+### Buscar atleta para ingresar score
+GET {{baseUrl}}/api/scores/search/athlete?competition_id=1&query=Juan
+Authorization: Bearer {{authToken}}
+
+### Registrar score - TIME (en segundos)
+POST {{baseUrl}}/api/scores
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "athlete_id": 1,
+  "wod_id": 1,
+  "raw_result": 185,
+  "result_type": "completed",
+  "notes": "Buen tiempo"
+}
+
+### Registrar score - TIME con cap (reps completadas)
+POST {{baseUrl}}/api/scores
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "athlete_id": 2,
+  "wod_id": 1,
+  "raw_result": 35,
+  "result_type": "capped",
+  "notes": "No termino, 35 reps"
+}
+
+### Registrar score - AMRAP (reps totales)
+POST {{baseUrl}}/api/scores
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "athlete_id": 1,
+  "wod_id": 2,
+  "raw_result": 187,
+  "result_type": "completed",
+  "tiebreak": 45,
+  "notes": "9 rondas + 7 reps"
+}
+
+### Registrar score - LOAD (peso en lbs)
+POST {{baseUrl}}/api/scores
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "athlete_id": 1,
+  "wod_id": 3,
+  "raw_result": 275,
+  "result_type": "completed",
+  "notes": "PR personal"
+}
+
+### Registrar score bulk (multiples atletas)
+POST {{baseUrl}}/api/scores/bulk
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "wod_id": 1,
+  "scores": [
+    {"athlete_id": 3, "raw_result": 195, "result_type": "completed"},
+    {"athlete_id": 4, "raw_result": 210, "result_type": "completed"},
+    {"athlete_id": 5, "raw_result": 42, "result_type": "capped"}
+  ]
+}
+
+### Ver score
+GET {{baseUrl}}/api/scores/1
+Authorization: Bearer {{authToken}}
+
+### Actualizar score
+PUT {{baseUrl}}/api/scores/1
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "raw_result": 180,
+  "notes": "Tiempo corregido"
+}
+
+### Verificar score (admin/head judge)
+POST {{baseUrl}}/api/scores/1/verify
+Authorization: Bearer {{authToken}}
+
+### Eliminar score
+DELETE {{baseUrl}}/api/scores/1
+Authorization: Bearer {{authToken}}
+
+### ============================================
+### LEADERBOARD (Public)
+### ============================================
+
+### Leaderboard completo de competencia
+GET {{baseUrl}}/api/leaderboard/1
+
+### Leaderboard por division
+GET {{baseUrl}}/api/leaderboard/1/division/RX%20Masculino
+
+### Lista de divisiones
+GET {{baseUrl}}/api/leaderboard/1/divisions
+
+### Lista de WODs
+GET {{baseUrl}}/api/leaderboard/1/wods
+
+### Resultados de atleta especifico
+GET {{baseUrl}}/api/leaderboard/1/athlete/1
+
+### Resumen (top 3 por division)
+GET {{baseUrl}}/api/leaderboard/1/summary
+
+### ============================================
+### AUDIT LOG
+### ============================================
+
+### Ver log de auditoria
+GET {{baseUrl}}/api/audit?limit=20
+Authorization: Bearer {{authToken}}
+
+### Filtrar por usuario
+GET {{baseUrl}}/api/audit/user/1
+Authorization: Bearer {{authToken}}
+
+### Filtrar por score
+GET {{baseUrl}}/api/audit/score/1
+Authorization: Bearer {{authToken}}
+
+### Estadisticas de auditoria
+GET {{baseUrl}}/api/audit/stats
+Authorization: Bearer {{authToken}}
+
+### ============================================
+### EXPORT
+### ============================================
+
+### Exportar a CSV
+GET {{baseUrl}}/api/export/1/csv
+Authorization: Bearer {{authToken}}
+
+### Exportar a Excel
+GET {{baseUrl}}/api/export/1/excel
+Authorization: Bearer {{authToken}}
+
+### Exportar a PDF
+GET {{baseUrl}}/api/export/1/pdf
+Authorization: Bearer {{authToken}}
+
+### ============================================
+### EJEMPLOS DE FLUJO COMPLETO
+### ============================================
+
+### 1. Login como juez
+# @name loginJudge
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username=judge1&password=judge123
+
+@judgeToken = {{loginJudge.response.body.access_token}}
+
+### 2. Buscar atleta por numero de pechera
+GET {{baseUrl}}/api/scores/search/athlete?competition_id=1&query=001
+Authorization: Bearer {{judgeToken}}
+
+### 3. Registrar su score
+POST {{baseUrl}}/api/scores
+Authorization: Bearer {{judgeToken}}
+Content-Type: {{contentType}}
+
+{
+  "athlete_id": 1,
+  "wod_id": 1,
+  "raw_result": 245,
+  "result_type": "completed"
+}

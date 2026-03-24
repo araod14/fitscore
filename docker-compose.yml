@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  fitscore:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fitscore-app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - DATABASE_URL=sqlite+aiosqlite:///./data/fitscore.db
+      - DATABASE_URL_SYNC=sqlite:///./data/fitscore.db
+    volumes:
+      - fitscore-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Development service with auto-reload
+  fitscore-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fitscore-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=dev-secret-key
+      - DATABASE_URL=sqlite+aiosqlite:///./data/fitscore.db
+      - DATABASE_URL_SYNC=sqlite:///./data/fitscore.db
+    volumes:
+      - .:/app
+      - fitscore-data:/app/data
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    profiles:
+      - dev
+
+volumes:
+  fitscore-data:
+    driver: local
