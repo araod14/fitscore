@@ -30,14 +30,12 @@ ROLES = [Roles.ADMIN, Roles.JUDGE, Roles.VIEWER]
 
 # Divisions
 DIVISIONS = [
-    "RX Masculino",
-    "RX Femenino",
+    "Libre Masculino",
+    "Libre Femenino",
     "Scaled Masculino",
     "Scaled Femenino",
     "Master +40 Masculino",
     "Master +40 Femenino",
-    "Master +50 Masculino",
-    "Master +50 Femenino",
     "Teen Masculino",
     "Teen Femenino",
 ]

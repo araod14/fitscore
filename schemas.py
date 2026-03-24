@@ -130,16 +130,16 @@ class AthleteBase(BaseModel):
             raise ValueError(f"Gender must be one of: {GENDERS}")
         return v
 
+
+class AthleteCreate(AthleteBase):
+    competition_id: int
+
     @field_validator("division")
     @classmethod
     def validate_division(cls, v):
         if v not in DIVISIONS:
             raise ValueError(f"Division must be one of: {DIVISIONS}")
         return v
-
-
-class AthleteCreate(AthleteBase):
-    competition_id: int
 
 
 class AthleteUpdate(BaseModel):
