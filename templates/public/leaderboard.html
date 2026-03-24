@@ -259,8 +259,6 @@ function leaderboardPage() {
 
         formatResult(score, wodType) {
             if (!score || score.result === null) return '-';
-            if (score.result_type === 'DNF') return 'DNF';
-            if (score.result_type === 'DNS') return 'DNS';
 
             if (wodType === 'time') {
                 const mins = Math.floor(score.result / 60);

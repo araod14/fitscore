@@ -284,17 +284,8 @@ class WODListResponse(BaseModel):
 
 class ScoreBase(BaseModel):
     raw_result: Optional[float] = None
-    result_type: str = Field(default="RX")
     tiebreak: Optional[float] = None
     notes: Optional[str] = None
-
-    @field_validator("result_type")
-    @classmethod
-    def validate_result_type(cls, v):
-        valid_types = ["RX", "Scaled", "DNF", "DNS"]
-        if v not in valid_types:
-            raise ValueError(f"Result type must be one of: {valid_types}")
-        return v
 
 
 class ScoreCreate(ScoreBase):
@@ -304,20 +295,10 @@ class ScoreCreate(ScoreBase):
 
 class ScoreUpdate(BaseModel):
     raw_result: Optional[float] = None
-    result_type: Optional[str] = None
     tiebreak: Optional[float] = None
     notes: Optional[str] = None
     status: Optional[str] = None
     reason: Optional[str] = None  # Reason for the update (for audit)
-
-    @field_validator("result_type")
-    @classmethod
-    def validate_result_type(cls, v):
-        if v is not None:
-            valid_types = ["RX", "Scaled", "DNF", "DNS"]
-            if v not in valid_types:
-                raise ValueError(f"Result type must be one of: {valid_types}")
-        return v
 
     @field_validator("status")
     @classmethod

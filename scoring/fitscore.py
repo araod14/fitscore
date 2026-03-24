@@ -5,7 +5,7 @@ Scoring Rules:
 - Athletes are ranked within their division for each WOD
 - Points are awarded based on rank: 1st = N points (N = total athletes), last = 1
 - Ties: same rank, same points, next position skipped
-- DNF/DNS = 0 points
+- No result (null) = 0 points
 - Final FitScore = sum of all WOD points
 - Leaderboard sorted by total points (descending)
 """
@@ -28,7 +28,6 @@ class WODScore:
     athlete_id: int
     wod_id: int
     raw_result: Optional[float]
-    result_type: str
     tiebreak: Optional[float]
     rank: int = 0
     points: float = 0
@@ -59,7 +58,7 @@ class LeaderboardEntry:
     box: Optional[str]
     division: str
     total_points: float
-    wod_scores: List[Dict]  # [{wod_id, wod_name, rank, points, result, result_type}]
+    wod_scores: List[Dict]  # [{wod_id, wod_name, rank, points, result, tiebreak}]
 
 
 def is_higher_better(wod_type: str) -> bool:
@@ -85,17 +84,17 @@ def calculate_wod_rankings(
     Returns list of (score, rank) tuples.
 
     Ranking rules:
-    - DNF/DNS always ranked last with 0 points
+    - No result (null) always ranked last with 0 points
     - Ties get same rank, next rank is skipped
     - For time: lower is better
     - For other types: higher is better
     """
-    # Separate valid scores from DNF/DNS
+    # Separate scores with results from those without
     valid_scores = []
     invalid_scores = []
 
     for score in scores:
-        if score.result_type in ["DNF", "DNS"] or score.raw_result is None:
+        if score.raw_result is None:
             invalid_scores.append(score)
         else:
             valid_scores.append(score)
@@ -137,7 +136,7 @@ def calculate_wod_rankings(
                 current_rank = i + 1
         ranked_scores.append((score, current_rank))
 
-    # DNF/DNS get last rank (0 points)
+    # No result gets last rank (0 points)
     last_rank = len(valid_scores) + 1
     for score in invalid_scores:
         ranked_scores.append((score, last_rank))
@@ -146,9 +145,7 @@ def calculate_wod_rankings(
     return ranked_scores
 
 
-def calculate_wod_points(
-    rank: int, total_athletes: int, is_dnf_dns: bool = False
-) -> float:
+def calculate_wod_points(rank: int, total_athletes: int) -> float:
     """
     Calculate points for a given rank.
 
@@ -157,9 +154,9 @@ def calculate_wod_points(
     - 2nd place = total_athletes - 1 points
     - ...
     - Last place = 1 point
-    - DNF/DNS = 0 points
+    - No result = 0 points
     """
-    if is_dnf_dns or rank <= 0:
+    if rank <= 0:
         return 0
 
     points = total_athletes - rank + 1
@@ -201,7 +198,6 @@ async def calculate_athlete_total(
                 athlete_id=athlete_id,
                 wod_id=score.wod_id,
                 raw_result=score.raw_result,
-                result_type=score.result_type,
                 tiebreak=score.tiebreak,
                 rank=score.rank or 0,
                 points=score.points,
@@ -266,7 +262,6 @@ async def get_division_leaderboard(
                 athlete_id=score.athlete_id,
                 wod_id=score.wod_id,
                 raw_result=score.raw_result,
-                result_type=score.result_type,
                 tiebreak=score.tiebreak,
                 rank=score.rank or 0,
                 points=score.points or 0,
@@ -313,7 +308,6 @@ async def get_division_leaderboard(
                         "rank": wod_result.rank,
                         "points": wod_result.points,
                         "result": wod_result.raw_result,
-                        "result_type": wod_result.result_type,
                         "tiebreak": wod_result.tiebreak,
                     }
                 )
@@ -325,7 +319,6 @@ async def get_division_leaderboard(
                         "rank": None,
                         "points": 0,
                         "result": None,
-                        "result_type": None,
                         "tiebreak": None,
                     }
                 )
@@ -410,8 +403,7 @@ async def recalculate_wod_scores(db: AsyncSession, wod_id: int) -> int:
 
         # Update scores
         for score, rank in ranked:
-            is_dnf_dns = score.result_type in ["DNF", "DNS"]
-            points = calculate_wod_points(rank, total_athletes, is_dnf_dns)
+            points = calculate_wod_points(rank, total_athletes)
 
             score.rank = rank
             score.points = points
@@ -440,14 +432,10 @@ async def recalculate_competition_scores(db: AsyncSession, competition_id: int) 
     return total_updated
 
 
-def format_result(raw_result: Optional[float], wod_type: str, result_type: str) -> str:
+def format_result(raw_result: Optional[float], wod_type: str) -> str:
     """
     Format a raw result for display based on WOD type.
     """
-    if result_type == "DNF":
-        return "DNF"
-    if result_type == "DNS":
-        return "DNS"
     if raw_result is None:
         return "-"
 

@@ -79,31 +79,8 @@
                 </div>
             </div>
 
-            <!-- Result Type -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Resultado *</label>
-                <div class="flex space-x-4">
-                    <label class="flex items-center">
-                        <input type="radio" x-model="form.result_type" value="RX" class="text-primary-600 focus:ring-primary-500">
-                        <span class="ml-2 text-sm">RX</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" x-model="form.result_type" value="Scaled" class="text-primary-600 focus:ring-primary-500">
-                        <span class="ml-2 text-sm">Scaled</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" x-model="form.result_type" value="DNF" class="text-primary-600 focus:ring-primary-500">
-                        <span class="ml-2 text-sm">DNF</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" x-model="form.result_type" value="DNS" class="text-primary-600 focus:ring-primary-500">
-                        <span class="ml-2 text-sm">DNS</span>
-                    </label>
-                </div>
-            </div>
-
             <!-- Result Input (depends on WOD type) -->
-            <div x-show="form.result_type !== 'DNF' && form.result_type !== 'DNS'" class="mb-4">
+            <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1" x-text="getResultLabel()"></label>
 
                 <!-- Time Input -->
@@ -123,7 +100,7 @@
             </div>
 
             <!-- Tiebreak -->
-            <div x-show="wod.wod_type === 'amrap' && form.result_type !== 'DNF' && form.result_type !== 'DNS'" class="mb-4">
+            <div x-show="wod.wod_type === 'amrap'" class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Tiebreak (segundos)</label>
                 <input type="number" x-model.number="form.tiebreak" min="0" placeholder="Tiempo de tiebreak en segundos"
                        class="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -172,7 +149,6 @@
                                 <td class="px-4 py-2 text-sm" x-text="score.athlete_name"></td>
                                 <td class="px-4 py-2 text-sm">
                                     <span x-text="formatScoreResult(score)"></span>
-                                    <span x-show="score.result_type !== 'RX'" class="text-xs text-gray-500 ml-1" x-text="score.result_type"></span>
                                 </td>
                                 <td class="px-4 py-2 text-sm font-medium text-primary-600" x-text="score.points || 0"></td>
                             </tr>
@@ -203,7 +179,6 @@ function scoreEntry() {
         timeMinutes: null,
         timeSeconds: null,
         form: {
-            result_type: 'RX',
             raw_result: null,
             tiebreak: null,
             notes: ''
@@ -214,7 +189,6 @@ function scoreEntry() {
 
         get canSubmit() {
             if (!this.selectedAthlete) return false;
-            if (this.form.result_type === 'DNF' || this.form.result_type === 'DNS') return true;
             if (this.wod.wod_type === 'time') {
                 return this.timeMinutes !== null || this.timeSeconds !== null;
             }
@@ -279,15 +253,14 @@ function scoreEntry() {
             try {
                 // Calculate raw_result for time
                 let rawResult = this.form.raw_result;
-                if (this.wod.wod_type === 'time' && this.form.result_type !== 'DNF' && this.form.result_type !== 'DNS') {
+                if (this.wod.wod_type === 'time') {
                     rawResult = (this.timeMinutes || 0) * 60 + (this.timeSeconds || 0);
                 }
 
                 const body = {
                     athlete_id: this.selectedAthlete.id,
                     wod_id: this.wodId,
-                    result_type: this.form.result_type,
-                    raw_result: this.form.result_type === 'DNF' || this.form.result_type === 'DNS' ? null : rawResult,
+                    raw_result: rawResult,
                     tiebreak: this.form.tiebreak,
                     notes: this.form.notes || null
                 };
@@ -307,7 +280,7 @@ function scoreEntry() {
 
                 // Reset form
                 this.clearAthlete();
-                this.form = { result_type: 'RX', raw_result: null, tiebreak: null, notes: '' };
+                this.form = { raw_result: null, tiebreak: null, notes: '' };
                 this.timeMinutes = null;
                 this.timeSeconds = null;
 
@@ -360,8 +333,6 @@ function scoreEntry() {
         },
 
         formatScoreResult(score) {
-            if (score.result_type === 'DNF') return 'DNF';
-            if (score.result_type === 'DNS') return 'DNS';
             if (score.raw_result === null) return '-';
 
             if (this.wod.wod_type === 'time') {

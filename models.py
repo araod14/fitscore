@@ -258,9 +258,6 @@ class Score(Base):
     # For load: kg (can be float)
     raw_result: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # Result type (RX, Scaled, DNF, DNS)
-    result_type: Mapped[str] = mapped_column(String(20), default="RX", nullable=False)
-
     # Tiebreak value (for time-capped AMRAPs, etc.)
     tiebreak: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
@@ -308,26 +305,10 @@ class Score(Base):
     )
 
     @property
-    def is_dnf(self) -> bool:
-        """Check if score is DNF (Did Not Finish)."""
-        return self.result_type == "DNF"
-
-    @property
-    def is_dns(self) -> bool:
-        """Check if score is DNS (Did Not Start)."""
-        return self.result_type == "DNS"
-
-    @property
     def result_formatted(self) -> str:
         """Format result based on WOD type."""
-        if self.is_dnf:
-            return "DNF"
-        if self.is_dns:
-            return "DNS"
         if self.raw_result is None:
             return "-"
-
-        # Needs WOD context to format properly
         return str(self.raw_result)
 
     def __repr__(self):

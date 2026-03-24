@@ -216,9 +216,7 @@ async def export_csv(
                 ws_data = wod_scores_map.get(wod.id, {})
                 result = ws_data.get("result")
                 if result is not None:
-                    formatted = format_result(
-                        result, wod.wod_type, ws_data.get("result_type", "RX")
-                    )
+                    formatted = format_result(result, wod.wod_type)
                 else:
                     formatted = "-"
                 row.extend([formatted, ws_data.get("points", 0)])

@@ -54,7 +54,6 @@ def score_to_dict(score: Score) -> dict:
     """Convert a score to a dict for audit logging."""
     return {
         "raw_result": score.raw_result,
-        "result_type": score.result_type,
         "tiebreak": score.tiebreak,
         "status": score.status,
         "notes": score.notes,
@@ -115,7 +114,6 @@ async def list_scores(
                 athlete_id=score.athlete_id,
                 wod_id=score.wod_id,
                 raw_result=score.raw_result,
-                result_type=score.result_type,
                 tiebreak=score.tiebreak,
                 rank=score.rank,
                 points=score.points,
@@ -180,7 +178,6 @@ async def create_score(
         athlete_id=score_data.athlete_id,
         wod_id=score_data.wod_id,
         raw_result=score_data.raw_result,
-        result_type=score_data.result_type,
         tiebreak=score_data.tiebreak,
         notes=score_data.notes,
         judge_id=current_user.id,
@@ -210,7 +207,6 @@ async def create_score(
         athlete_id=score.athlete_id,
         wod_id=score.wod_id,
         raw_result=score.raw_result,
-        result_type=score.result_type,
         tiebreak=score.tiebreak,
         rank=score.rank,
         points=score.points,
@@ -249,7 +245,6 @@ async def get_score(
         athlete_id=score.athlete_id,
         wod_id=score.wod_id,
         raw_result=score.raw_result,
-        result_type=score.result_type,
         tiebreak=score.tiebreak,
         rank=score.rank,
         points=score.points,
@@ -291,8 +286,6 @@ async def update_score(
     # Update fields
     if score_update.raw_result is not None:
         score.raw_result = score_update.raw_result
-    if score_update.result_type is not None:
-        score.result_type = score_update.result_type
     if score_update.tiebreak is not None:
         score.tiebreak = score_update.tiebreak
     if score_update.notes is not None:
@@ -328,7 +321,6 @@ async def update_score(
         athlete_id=score.athlete_id,
         wod_id=score.wod_id,
         raw_result=score.raw_result,
-        result_type=score.result_type,
         tiebreak=score.tiebreak,
         rank=score.rank,
         points=score.points,
@@ -426,7 +418,6 @@ async def verify_score(
         athlete_id=score.athlete_id,
         wod_id=score.wod_id,
         raw_result=score.raw_result,
-        result_type=score.result_type,
         tiebreak=score.tiebreak,
         rank=score.rank,
         points=score.points,
@@ -486,7 +477,6 @@ async def bulk_create_scores(
             athlete_id=score_data.athlete_id,
             wod_id=score_data.wod_id,
             raw_result=score_data.raw_result,
-            result_type=score_data.result_type,
             tiebreak=score_data.tiebreak,
             notes=score_data.notes,
             judge_id=current_user.id,
@@ -513,7 +503,6 @@ async def bulk_create_scores(
                 athlete_id=score.athlete_id,
                 wod_id=score.wod_id,
                 raw_result=score.raw_result,
-                result_type=score.result_type,
                 tiebreak=score.tiebreak,
                 rank=score.rank,
                 points=score.points,

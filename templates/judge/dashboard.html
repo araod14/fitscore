@@ -71,7 +71,6 @@
                             <td class="px-6 py-4 text-sm text-gray-500" x-text="score.wod_name"></td>
                             <td class="px-6 py-4">
                                 <span class="font-medium" x-text="formatResult(score)"></span>
-                                <span x-show="score.result_type !== 'RX'" class="ml-1 text-xs text-gray-500" x-text="score.result_type"></span>
                             </td>
                             <td class="px-6 py-4">
                                 <span :class="getStatusClass(score.status)" class="px-2 py-1 text-xs font-semibold rounded-full" x-text="getStatusLabel(score.status)"></span>
@@ -160,8 +159,6 @@ function judgeDashboard() {
         },
 
         formatResult(score) {
-            if (score.result_type === 'DNF') return 'DNF';
-            if (score.result_type === 'DNS') return 'DNS';
             if (score.raw_result === null) return '-';
             return score.raw_result;
         },

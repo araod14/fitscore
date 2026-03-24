@@ -135,7 +135,6 @@ def upgrade() -> None:
         sa.Column("athlete_id", sa.Integer(), nullable=False),
         sa.Column("wod_id", sa.Integer(), nullable=False),
         sa.Column("raw_result", sa.Float(), nullable=True),
-        sa.Column("result_type", sa.String(20), nullable=False, server_default="RX"),
         sa.Column("tiebreak", sa.Float(), nullable=True),
         sa.Column("rank", sa.Integer(), nullable=True),
         sa.Column("points", sa.Float(), nullable=True),

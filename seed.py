@@ -363,38 +363,29 @@ def seed_database():
             for wod in wods:
                 # Generate scores for this division in this WOD
                 for athlete in div_athletes:
-                    # 90% chance of having a valid score, 10% DNF/DNS
+                    # 90% chance of having a valid score, 10% no result
                     if random.random() < 0.9:
                         if wod.wod_type == WODTypes.TIME:
-                            # Generate time between 3 and 14 minutes
                             raw_result = random.randint(
                                 180, min(wod.time_cap - 60, 840)
                             )
-                            result_type = "RX" if random.random() > 0.2 else "Scaled"
                         elif wod.wod_type == WODTypes.AMRAP:
-                            # Generate reps between 100 and 250
                             raw_result = random.randint(100, 250)
-                            result_type = "RX" if random.random() > 0.2 else "Scaled"
                         elif wod.wod_type == WODTypes.LOAD:
-                            # Generate load based on gender
                             is_male = "Masculino" in division
                             if is_male:
                                 raw_result = random.randint(60, 130)
                             else:
                                 raw_result = random.randint(40, 85)
-                            result_type = "RX"
                         else:
                             raw_result = random.randint(50, 150)
-                            result_type = "RX"
                     else:
                         raw_result = None
-                        result_type = random.choice(["DNF", "DNS"])
 
                     score = Score(
                         athlete_id=athlete.id,
                         wod_id=wod.id,
                         raw_result=raw_result,
-                        result_type=result_type,
                         tiebreak=(
                             random.randint(30, 300)
                             if wod.wod_type == WODTypes.AMRAP and raw_result
@@ -433,16 +424,8 @@ def seed_database():
             # Calculate rankings for each division
             for div, div_scores in scores_by_div.items():
                 # Sort scores
-                valid_scores = [
-                    s
-                    for s in div_scores
-                    if s.result_type not in ["DNF", "DNS"] and s.raw_result is not None
-                ]
-                invalid_scores = [
-                    s
-                    for s in div_scores
-                    if s.result_type in ["DNF", "DNS"] or s.raw_result is None
-                ]
+                valid_scores = [s for s in div_scores if s.raw_result is not None]
+                invalid_scores = [s for s in div_scores if s.raw_result is None]
 
                 # Sort based on WOD type
                 if wod.wod_type == WODTypes.TIME:
@@ -469,7 +452,7 @@ def seed_database():
                     score.rank = current_rank
                     score.points = total_athletes - current_rank + 1
 
-                # DNF/DNS get 0 points
+                # No result = 0 points
                 for score in invalid_scores:
                     score.rank = len(valid_scores) + 1
                     score.points = 0

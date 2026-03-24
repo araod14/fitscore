@@ -192,7 +192,7 @@ async def get_athlete_results(
         score = scores_by_wod.get(wod.id)
         if score:
             total_points += score.points or 0
-            formatted = format_result(score.raw_result, wod.wod_type, score.result_type)
+            formatted = format_result(score.raw_result, wod.wod_type)
             results.append(
                 {
                     "wod_id": wod.id,
@@ -202,7 +202,6 @@ async def get_athlete_results(
                     "points": score.points,
                     "result": formatted,
                     "raw_result": score.raw_result,
-                    "result_type": score.result_type,
                     "tiebreak": score.tiebreak,
                 }
             )
@@ -216,7 +215,6 @@ async def get_athlete_results(
                     "points": 0,
                     "result": "-",
                     "raw_result": None,
-                    "result_type": None,
                     "tiebreak": None,
                 }
             )
