@@ -112,6 +112,7 @@ fitscore/
 ### Admin
 - `GET/POST /api/admin/competitions` - CRUD competencias
 - `GET/POST /api/admin/athletes` - CRUD atletas
+- `POST /api/admin/competitions/{id}/teams` - Agregar equipo (modo equipos)
 - `POST /api/admin/competitions/{id}/athletes/import` - Importar CSV
 - `GET/POST /api/admin/wods` - CRUD WODs
 
@@ -136,28 +137,59 @@ fitscore/
 
 ## Sistema de Puntuacion FitScore
 
-### Logica de Ranking
-- **For Time**: Menor tiempo = mejor posicion
-- **AMRAP/Reps/Calories/Load**: Mayor valor = mejor posicion
-- Empates: Mismo puesto, mismo puntaje, siguiente posicion se salta
+### Logica de Ranking por WOD
 
-### Puntos
-- 1er lugar = N puntos (N = total de atletas en division)
-- 2do lugar = N-1 puntos
-- ...
-- Ultimo lugar = 1 punto
-- DNF/DNS = 0 puntos
+Los atletas se ranquean **dentro de su propia division** (no contra el campo completo).
+
+Direccion segun tipo de WOD:
+- **time**: menor tiempo = mejor posicion
+- **amrap / reps / calories / load / distance**: mayor valor = mejor posicion
+
+### Puntos por WOD
+
+```
+puntos = total_atletas_en_division - rank + 1
+```
+
+Ejemplo con 5 atletas en la division:
+
+| Posicion | Puntos |
+|----------|--------|
+| 1º | 5 |
+| 2º | 4 |
+| 3º | 3 |
+| 4º | 2 |
+| 5º | 1 |
+| DNF/DNS (sin resultado) | 0 |
+
+### Empates dentro de un WOD
+
+Dos atletas empatan si tienen **exactamente el mismo resultado Y el mismo tiebreak**.
+- Ambos reciben el mismo rank y los mismos puntos.
+- El siguiente rank se salta (ej: dos atletas empatan en 1º → el siguiente es 3º).
 
 ### FitScore Final
-Suma de puntos obtenidos en todos los WODs.
+
+Suma de puntos obtenidos en todos los WODs de la competencia.
+
+### Criterio de desempate en el leaderboard (countback)
+
+Cuando dos atletas tienen el mismo FitScore total se aplica el metodo **countback** (estandar CrossFit):
+
+1. Mayor cantidad de **1eros puestos** en WODs individuales.
+2. Si siguen iguales → mayor cantidad de **2dos puestos**.
+3. Luego 3eros, 4tos, etc.
+4. Si todo lo anterior es identico → **menor numero de dorsal** (bib_number).
+
+El countback garantiza que siempre haya un ganador claro en el leaderboard final.
 
 ## Divisiones Soportadas
 
-- RX Masculino / Femenino
+- Libre Masculino / Femenino
 - Scaled Masculino / Femenino
 - Master +40 Masculino / Femenino
-- Master +50 Masculino / Femenino
-- Teen Masculino / Femenino
+- Novato Masculino / Femenino
+- Equipos (competencias en modo equipo)
 
 ## Tipos de WOD
 
