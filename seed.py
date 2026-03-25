@@ -300,15 +300,15 @@ def seed_database():
             "Master +40 Femenino",
             "Master +50 Masculino",
             "Master +50 Femenino",
-            "Teen Masculino",
-            "Teen Femenino",
+            "Novato Masculino",
+            "Novato Femenino",
         ]
 
         for division in active_divisions:
             is_male = "Masculino" in division
             is_master40 = "+40" in division
             is_master50 = "+50" in division
-            is_teen = "Teen" in division
+            is_teen = "Novato" in division
 
             for _ in range(5):
                 # Generate birth date based on category
