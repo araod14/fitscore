@@ -11,11 +11,11 @@
             <p class="text-gray-600">Gestiona los atletas de la competencia</p>
         </div>
         <div class="flex space-x-2">
-            <button @click="showImportModal = true" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+            <button x-show="!isTeamMode" @click="showImportModal = true" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
                 Importar CSV
             </button>
-            <button @click="openModal()" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
-                Nuevo Atleta
+            <button @click="openModal()" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                    x-text="isTeamMode ? 'Nuevo Equipo' : 'Nuevo Atleta'">
             </button>
         </div>
     </div>
@@ -57,33 +57,32 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dorsal</th>
+                        <th x-show="!isTeamMode" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dorsal</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Division</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Box</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Genero</th>
+                        <th x-show="!isTeamMode" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Division</th>
+                        <th x-show="!isTeamMode" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Box</th>
+                        <th x-show="!isTeamMode" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Genero</th>
                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <template x-for="athlete in athletes" :key="athlete.id">
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 font-medium" x-text="athlete.bib_number"></td>
+                            <td x-show="!isTeamMode" class="px-6 py-4 font-medium" x-text="athlete.bib_number"></td>
                             <td class="px-6 py-4" x-text="athlete.name"></td>
-                            <td class="px-6 py-4 text-sm">
+                            <td x-show="!isTeamMode" class="px-6 py-4 text-sm">
                                 <span class="px-2 py-1 bg-gray-100 rounded-full text-xs" x-text="athlete.division"></span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-500" x-text="athlete.box || '-'"></td>
-                            <td class="px-6 py-4 text-sm text-gray-500" x-text="athlete.gender"></td>
+                            <td x-show="!isTeamMode" class="px-6 py-4 text-sm text-gray-500" x-text="athlete.box || '-'"></td>
+                            <td x-show="!isTeamMode" class="px-6 py-4 text-sm text-gray-500" x-text="athlete.gender"></td>
                             <td class="px-6 py-4 text-right text-sm">
-                                <button @click="editAthlete(athlete)" class="text-primary-600 hover:text-primary-900 mr-2">Editar</button>
                                 <button @click="deleteAthlete(athlete.id)" class="text-red-600 hover:text-red-900">Eliminar</button>
                             </td>
                         </tr>
                     </template>
                     <tr x-show="athletes.length === 0 && !loading && selectedCompetition">
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                            No hay atletas registrados en esta competencia.
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500"
+                            x-text="isTeamMode ? 'No hay equipos registrados en esta competencia.' : 'No hay atletas registrados en esta competencia.'">
                         </td>
                     </tr>
                     <tr x-show="!selectedCompetition">
@@ -95,7 +94,8 @@
             </table>
         </div>
         <div x-show="totalAthletes > 0" class="px-6 py-3 bg-gray-50 border-t text-sm text-gray-500">
-            Mostrando <span x-text="athletes.length"></span> de <span x-text="totalAthletes"></span> atletas
+            Mostrando <span x-text="athletes.length"></span> de <span x-text="totalAthletes"></span>
+            <span x-text="isTeamMode ? 'equipos' : 'atletas'"></span>
         </div>
     </div>
 
@@ -106,7 +106,8 @@
 
             <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
                 <div class="px-6 py-4 border-b sticky top-0 bg-white">
-                    <h3 class="text-lg font-medium text-gray-900" x-text="editingId ? 'Editar Atleta' : 'Nuevo Atleta'"></h3>
+                    <h3 class="text-lg font-medium text-gray-900"
+                        x-text="isTeamMode ? (editingId ? 'Editar Equipo' : 'Nuevo Equipo') : (editingId ? 'Editar Atleta' : 'Nuevo Atleta')"></h3>
                 </div>
 
                 <form @submit.prevent="saveAthlete()">
@@ -118,15 +119,15 @@
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Dorsal *</label>
-                                <input type="text" x-model="form.bib_number" required
+                                <input type="text" x-model="form.bib_number" :required="!isTeamMode"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Genero *</label>
-                                <select x-model="form.gender" required
+                                <select x-model="form.gender" :required="!isTeamMode"
                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                                     <option value="">Seleccionar...</option>
                                     <option value="Masculino">Masculino</option>
@@ -134,9 +135,9 @@
                                 </select>
                             </div>
 
-                            <div class="col-span-2">
+                            <div x-show="!isTeamMode" class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700">Division *</label>
-                                <select x-model="form.division" required
+                                <select x-model="form.division" :required="!isTeamMode"
                                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                                     <option value="">Seleccionar...</option>
                                     <template x-for="div in divisions" :key="div">
@@ -145,25 +146,25 @@
                                 </select>
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Fecha Nacimiento</label>
                                 <input type="date" x-model="form.birth_date"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Box</label>
                                 <input type="text" x-model="form.box"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Email</label>
                                 <input type="email" x-model="form.email"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
                             </div>
 
-                            <div>
+                            <div x-show="!isTeamMode">
                                 <label class="block text-sm font-medium text-gray-700">Telefono</label>
                                 <input type="tel" x-model="form.phone"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
@@ -276,6 +277,11 @@ function athletesPage() {
             birth_date: '', box: '', email: '', phone: ''
         },
 
+        get isTeamMode() {
+            const comp = this.competitions.find(c => c.id == this.selectedCompetition);
+            return comp ? comp.has_teams : false;
+        },
+
         async init() {
             await this.loadCompetitions();
             // Auto-select first competition if available
@@ -349,14 +355,20 @@ function athletesPage() {
             this.error = '';
 
             try {
-                const url = this.editingId
-                    ? `/api/admin/athletes/${this.editingId}`
-                    : '/api/admin/athletes';
-                const method = this.editingId ? 'PUT' : 'POST';
+                let url, method, body;
 
-                const body = { ...this.form };
-                if (!this.editingId) {
-                    body.competition_id = parseInt(this.selectedCompetition);
+                if (this.isTeamMode && !this.editingId) {
+                    url = `/api/admin/competitions/${this.selectedCompetition}/teams`;
+                    method = 'POST';
+                    body = { name: this.form.name, competition_id: parseInt(this.selectedCompetition) };
+                } else if (this.editingId) {
+                    url = `/api/admin/athletes/${this.editingId}`;
+                    method = 'PUT';
+                    body = { ...this.form };
+                } else {
+                    url = '/api/admin/athletes';
+                    method = 'POST';
+                    body = { ...this.form, competition_id: parseInt(this.selectedCompetition) };
                 }
 
                 const res = await fetch(url, {
@@ -379,7 +391,8 @@ function athletesPage() {
         },
 
         async deleteAthlete(id) {
-            if (!confirm('Estas seguro de eliminar este atleta?')) return;
+            const msg = this.isTeamMode ? 'Estas seguro de eliminar este equipo?' : 'Estas seguro de eliminar este atleta?';
+            if (!confirm(msg)) return;
 
             try {
                 const res = await fetch(`/api/admin/athletes/${id}`, { method: 'DELETE' });

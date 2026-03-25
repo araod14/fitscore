@@ -99,7 +99,7 @@
                     <!-- Athlete Info -->
                     <div>
                         <div class="font-medium text-gray-900" x-text="entry.athlete_name"></div>
-                        <div class="text-sm text-gray-500">
+                        <div class="text-sm text-gray-500" x-show="selectedDivision !== 'Equipos'">
                             <span x-text="'#' + entry.bib_number"></span>
                             <span x-show="entry.box" class="ml-2" x-text="entry.box"></span>
                         </div>

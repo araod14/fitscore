@@ -75,6 +75,7 @@ class Competition(Base):
     date: Mapped[date] = mapped_column(Date, nullable=False)
     location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    has_teams: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
@@ -117,6 +118,7 @@ class Athlete(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     bib_number: Mapped[str] = mapped_column(String(20), nullable=False)  # Dorsal number
+    is_team: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     competition_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("competitions.id"), nullable=False
     )

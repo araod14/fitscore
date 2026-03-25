@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from auth import get_current_admin, get_current_judge_or_admin
-from config import DIVISIONS, GENDERS
+from config import DIVISIONS, GENDERS, TEAM_DIVISION
 from database import get_db
 from models import WOD, Athlete, Competition, Score, User, WODStandard
 from schemas import (
@@ -27,6 +27,7 @@ from schemas import (
     CompetitionResponse,
     CompetitionUpdate,
     DashboardStats,
+    TeamCreate,
     WODCreate,
     WODListResponse,
     WODResponse,
@@ -90,6 +91,7 @@ async def list_competitions(
                 date=comp.date,
                 location=comp.location,
                 is_active=comp.is_active,
+                has_teams=comp.has_teams,
                 created_at=comp.created_at,
                 created_by=comp.created_by,
                 athlete_count=athlete_count,
@@ -118,6 +120,7 @@ async def create_competition(
         description=competition.description,
         date=competition.date,
         location=competition.location,
+        has_teams=competition.has_teams,
         created_by=current_user.id,
     )
     db.add(comp)
@@ -131,6 +134,7 @@ async def create_competition(
         date=comp.date,
         location=comp.location,
         is_active=comp.is_active,
+        has_teams=comp.has_teams,
         created_at=comp.created_at,
         created_by=comp.created_by,
         athlete_count=0,
@@ -172,6 +176,7 @@ async def get_competition(
         date=comp.date,
         location=comp.location,
         is_active=comp.is_active,
+        has_teams=comp.has_teams,
         created_at=comp.created_at,
         created_by=comp.created_by,
         athlete_count=athlete_count,
@@ -206,6 +211,8 @@ async def update_competition(
         comp.location = competition.location
     if competition.is_active is not None:
         comp.is_active = competition.is_active
+    if competition.has_teams is not None:
+        comp.has_teams = competition.has_teams
 
     await db.flush()
     await db.refresh(comp)
@@ -225,6 +232,7 @@ async def update_competition(
         date=comp.date,
         location=comp.location,
         is_active=comp.is_active,
+        has_teams=comp.has_teams,
         created_at=comp.created_at,
         created_by=comp.created_by,
         athlete_count=athlete_count_result.scalar(),
@@ -308,8 +316,14 @@ async def create_athlete(
     comp_result = await db.execute(
         select(Competition).where(Competition.id == athlete.competition_id)
     )
-    if not comp_result.scalar_one_or_none():
+    comp = comp_result.scalar_one_or_none()
+    if not comp:
         raise HTTPException(status_code=404, detail="Competition not found")
+    if comp.has_teams:
+        raise HTTPException(
+            status_code=400,
+            detail="Esta competencia es de equipos. Usa POST /competitions/{id}/teams",
+        )
 
     # Check bib_number uniqueness
     existing = await db.execute(
@@ -432,8 +446,15 @@ async def import_athletes_csv(
     comp_result = await db.execute(
         select(Competition).where(Competition.id == competition_id)
     )
-    if not comp_result.scalar_one_or_none():
+    comp_obj = comp_result.scalar_one_or_none()
+    if not comp_obj:
         raise HTTPException(status_code=404, detail="Competition not found")
+    if comp_obj.has_teams:
+        raise HTTPException(
+            status_code=400,
+            detail="Esta competencia es de equipos. "
+            "No se puede importar CSV de atletas.",
+        )
 
     # Read and parse CSV
     content = await file.read()
@@ -506,6 +527,58 @@ async def import_athletes_csv(
         error_count=error_count,
         errors=errors[:50],  # Limit errors to first 50
     )
+
+
+@router.post(
+    "/competitions/{competition_id}/teams",
+    response_model=AthleteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_team(
+    competition_id: int,
+    team: TeamCreate,
+    current_user: Annotated[User, Depends(get_current_admin)],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Add a team to a team-mode competition.
+    """
+    comp_result = await db.execute(
+        select(Competition).where(Competition.id == competition_id)
+    )
+    comp = comp_result.scalar_one_or_none()
+    if not comp:
+        raise HTTPException(status_code=404, detail="Competition not found")
+    if not comp.has_teams:
+        raise HTTPException(
+            status_code=400,
+            detail="Esta competencia no es de equipos.",
+        )
+
+    # Auto-assign next bib number
+    max_bib_result = await db.execute(
+        select(func.max(Athlete.bib_number)).where(
+            Athlete.competition_id == competition_id
+        )
+    )
+    max_bib = max_bib_result.scalar() or "0"
+    try:
+        next_bib = str(int(max_bib) + 1)
+    except ValueError:
+        next_bib = "1"
+
+    new_team = Athlete(
+        name=team.name,
+        gender=TEAM_DIVISION,
+        division=TEAM_DIVISION,
+        bib_number=next_bib,
+        competition_id=competition_id,
+        is_team=True,
+    )
+    db.add(new_team)
+    await db.flush()
+    await db.refresh(new_team)
+    return new_team
 
 
 # ============== WODs ==============

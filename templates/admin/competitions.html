@@ -43,6 +43,8 @@
                             <span :class="comp.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
                                   class="px-2 py-1 text-xs font-semibold rounded-full"
                                   x-text="comp.is_active ? 'Activa' : 'Inactiva'"></span>
+                            <span x-show="comp.has_teams"
+                                  class="ml-1 px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">Equipos</span>
                         </td>
                         <td class="px-6 py-4 text-right text-sm">
                             <button @click="editCompetition(comp)" class="text-primary-600 hover:text-primary-900 mr-2">Editar</button>
@@ -101,6 +103,12 @@
                             <label for="is_active" class="ml-2 block text-sm text-gray-900">Competencia activa</label>
                         </div>
 
+                        <div class="flex items-center">
+                            <input type="checkbox" x-model="form.has_teams" id="has_teams"
+                                   class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded">
+                            <label for="has_teams" class="ml-2 block text-sm text-gray-900">Modo equipos (en lugar de atletas individuales)</label>
+                        </div>
+
                         <div x-show="error" class="p-3 bg-red-100 text-red-700 rounded-md text-sm" x-text="error"></div>
                     </div>
 
@@ -133,7 +141,8 @@ function competitionsPage() {
             date: '',
             location: '',
             description: '',
-            is_active: true
+            is_active: true,
+            has_teams: false
         },
 
         async loadCompetitions() {
@@ -150,7 +159,7 @@ function competitionsPage() {
 
         openModal() {
             this.editingId = null;
-            this.form = { name: '', date: '', location: '', description: '', is_active: true };
+            this.form = { name: '', date: '', location: '', description: '', is_active: true, has_teams: false };
             this.error = '';
             this.showModal = true;
         },
@@ -162,7 +171,8 @@ function competitionsPage() {
                 date: comp.date,
                 location: comp.location || '',
                 description: comp.description || '',
-                is_active: comp.is_active
+                is_active: comp.is_active,
+                has_teams: comp.has_teams || false
             };
             this.error = '';
             this.showModal = true;

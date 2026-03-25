@@ -28,6 +28,9 @@ class Roles:
 
 ROLES = [Roles.ADMIN, Roles.JUDGE, Roles.VIEWER]
 
+# Team division sentinel (used for team-mode competitions)
+TEAM_DIVISION = "Equipos"
+
 # Divisions
 DIVISIONS = [
     "Libre Masculino",

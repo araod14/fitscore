@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from config import DIVISIONS, GENDERS, ROLES, SCORE_STATUSES, WOD_TYPES
+from config import DIVISIONS, GENDERS, ROLES, SCORE_STATUSES, TEAM_DIVISION, WOD_TYPES
 
 # ============== User Schemas ==============
 
@@ -81,7 +81,7 @@ class CompetitionBase(BaseModel):
 
 
 class CompetitionCreate(CompetitionBase):
-    pass
+    has_teams: bool = False
 
 
 class CompetitionUpdate(BaseModel):
@@ -90,11 +90,13 @@ class CompetitionUpdate(BaseModel):
     date: Optional[date] = None
     location: Optional[str] = Field(None, max_length=200)
     is_active: Optional[bool] = None
+    has_teams: Optional[bool] = None
 
 
 class CompetitionResponse(CompetitionBase):
     id: int
     is_active: bool
+    has_teams: bool = False
     created_at: datetime
     created_by: int
     athlete_count: Optional[int] = 0
@@ -126,6 +128,8 @@ class AthleteBase(BaseModel):
     @field_validator("gender")
     @classmethod
     def validate_gender(cls, v):
+        if v == TEAM_DIVISION:
+            return v
         if v not in GENDERS:
             raise ValueError(f"Gender must be one of: {GENDERS}")
         return v
@@ -137,6 +141,8 @@ class AthleteCreate(AthleteBase):
     @field_validator("division")
     @classmethod
     def validate_division(cls, v):
+        if v == TEAM_DIVISION:
+            return v
         if v not in DIVISIONS:
             raise ValueError(f"Division must be one of: {DIVISIONS}")
         return v
@@ -156,14 +162,14 @@ class AthleteUpdate(BaseModel):
     @field_validator("gender")
     @classmethod
     def validate_gender(cls, v):
-        if v is not None and v not in GENDERS:
+        if v is not None and v != TEAM_DIVISION and v not in GENDERS:
             raise ValueError(f"Gender must be one of: {GENDERS}")
         return v
 
     @field_validator("division")
     @classmethod
     def validate_division(cls, v):
-        if v is not None and v not in DIVISIONS:
+        if v is not None and v != TEAM_DIVISION and v not in DIVISIONS:
             raise ValueError(f"Division must be one of: {DIVISIONS}")
         return v
 
@@ -171,6 +177,7 @@ class AthleteUpdate(BaseModel):
 class AthleteResponse(AthleteBase):
     id: int
     competition_id: int
+    is_team: bool = False
     created_at: datetime
     age: Optional[int] = None
     total_points: Optional[float] = None
@@ -200,6 +207,11 @@ class AthleteImportResult(BaseModel):
     errors: List[str]
 
 
+class TeamCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    competition_id: int
+
+
 # ============== WOD Schemas ==============
 
 
@@ -211,6 +223,8 @@ class WODStandardBase(BaseModel):
     @field_validator("division")
     @classmethod
     def validate_division(cls, v):
+        if v == TEAM_DIVISION:
+            return v
         if v not in DIVISIONS:
             raise ValueError(f"Division must be one of: {DIVISIONS}")
         return v
