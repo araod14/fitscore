@@ -1,12 +1,12 @@
 """
-FitScore Algorithm - CrossFit competition scoring system.
+Podium Algorithm - CrossFit competition scoring system.
 
 Scoring Rules:
 - Athletes are ranked within their division for each WOD
 - Points are awarded based on rank: 1st = N points (N = total athletes), last = 1
 - Ties: same rank, same points, next position skipped
 - No result (null) = 0 points
-- Final FitScore = sum of all WOD points
+- Final Podium = sum of all WOD points
 - Leaderboard sorted by total points (descending)
 """
 
@@ -167,7 +167,7 @@ async def calculate_athlete_total(
     db: AsyncSession, athlete_id: int, competition_id: int
 ) -> AthleteTotal:
     """
-    Calculate total FitScore for a single athlete.
+    Calculate total Podium for a single athlete.
     """
     # Get athlete
     athlete_result = await db.execute(select(Athlete).where(Athlete.id == athlete_id))

@@ -1,5 +1,5 @@
 """
-SQLAlchemy ORM Models for FitScore application.
+SQLAlchemy ORM Models for Podium application.
 """
 
 from datetime import date, datetime
@@ -266,7 +266,7 @@ class Score(Base):
     # Calculated rank within division for this WOD
     rank: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    # Points earned for this WOD (FitScore system)
+    # Points earned for this WOD (Podium system)
     points: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Status and verification

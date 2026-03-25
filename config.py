@@ -1,20 +1,20 @@
 """
-FitScore Configuration - Constants and settings for CrossFit competition management.
+Podium Configuration - Constants and settings for CrossFit competition management.
 """
 
 import os
 
 # Application Settings
-APP_NAME = "FitScore"
+APP_NAME = "Podium"
 APP_VERSION = "1.0.0"
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 # Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./fitscore.db")
-DATABASE_URL_SYNC = os.getenv("DATABASE_URL_SYNC", "sqlite:///./fitscore.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./podium.db")
+DATABASE_URL_SYNC = os.getenv("DATABASE_URL_SYNC", "sqlite:///./podium.db")
 
 # JWT Settings
-SECRET_KEY = os.getenv("SECRET_KEY", "fitscore-secret-key-change-in-production-2025")
+SECRET_KEY = os.getenv("SECRET_KEY", "podium-secret-key-change-in-production-2025")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 

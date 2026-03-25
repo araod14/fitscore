@@ -1,5 +1,5 @@
 """
-API Routers for FitScore application.
+API Routers for Podium application.
 """
 
 from .admin import router as admin_router

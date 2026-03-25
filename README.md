@@ -1,13 +1,13 @@
-# FitScore - Sistema de Gestion de Competencias CrossFit
+# Podium - Sistema de Gestion de Competencias CrossFit
 
-Sistema completo para gestionar competencias de CrossFit con sistema de puntuacion FitScore, incluyendo panel de administracion, vista de jueces, leaderboard publico y sistema de auditoria.
+Sistema completo para gestionar competencias de CrossFit con sistema de puntuacion Podium, incluyendo panel de administracion, vista de jueces, leaderboard publico y sistema de auditoria.
 
 ## Caracteristicas
 
 - **Panel de Administracion**: CRUD completo para competencias, atletas y WODs
 - **Vista de Jueces**: Ingreso rapido de scores con busqueda de atletas
 - **Leaderboard Publico**: Actualizacion automatica con tabs por division
-- **Sistema de Puntuacion FitScore**: Calculo automatico de rankings y puntos
+- **Sistema de Puntuacion Podium**: Calculo automatico de rankings y puntos
 - **Auditoria**: Log completo de cambios en scores
 - **Exportacion**: PDF, Excel y CSV de resultados
 - **Importacion**: Carga masiva de atletas via CSV
@@ -135,7 +135,7 @@ fitscore/
 - `GET /api/audit` - Log de auditoria
 - `GET /api/audit/score/{id}` - Historial de un score
 
-## Sistema de Puntuacion FitScore
+## Sistema de Puntuacion Podium
 
 ### Logica de Ranking por WOD
 
@@ -168,13 +168,13 @@ Dos atletas empatan si tienen **exactamente el mismo resultado Y el mismo tiebre
 - Ambos reciben el mismo rank y los mismos puntos.
 - El siguiente rank se salta (ej: dos atletas empatan en 1º → el siguiente es 3º).
 
-### FitScore Final
+### Puntuacion Final
 
 Suma de puntos obtenidos en todos los WODs de la competencia.
 
 ### Criterio de desempate en el leaderboard (countback)
 
-Cuando dos atletas tienen el mismo FitScore total se aplica el metodo **countback** (estandar CrossFit):
+Cuando dos atletas tienen el mismo total de puntos se aplica el metodo **countback** (estandar CrossFit):
 
 1. Mayor cantidad de **1eros puestos** en WODs individuales.
 2. Si siguen iguales → mayor cantidad de **2dos puestos**.
@@ -242,7 +242,7 @@ pytest
 ```bash
 SECRET_KEY=tu-clave-secreta-segura
 DEBUG=False
-DATABASE_URL=sqlite+aiosqlite:///./data/fitscore.db
+DATABASE_URL=sqlite+aiosqlite:///./data/podium.db
 ```
 
 ### Con Gunicorn

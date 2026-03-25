@@ -1,5 +1,5 @@
 """
-FitScore - CrossFit Competition Management System
+Podium - CrossFit Competition Management System
 Main FastAPI Application Entry Point
 """
 
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=APP_NAME,
     version=APP_VERSION,
-    description="Sistema de gestion de competencias CrossFit con puntuacion FitScore",
+    description="Sistema de gestion de competencias CrossFit",
     lifespan=lifespan,
     docs_url="/api/docs" if DEBUG else None,
     redoc_url="/api/redoc" if DEBUG else None,

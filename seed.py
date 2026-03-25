@@ -1,5 +1,5 @@
 """
-Seed script for FitScore - Creates test data for development and testing.
+Seed script for Podium - Creates test data for development and testing.
 Usage: python seed.py
 """
 
@@ -29,7 +29,7 @@ def seed_database():
         existing_users = db.query(User).count()
         if existing_users > 0:
             print("Database already has data. Skipping seed.")
-            print("To reset, delete fitscore.db and run again.")
+            print("To reset, delete podium.db and run again.")
             return
 
         print("Seeding database...")
@@ -39,7 +39,7 @@ def seed_database():
 
         admin = User(
             username="admin",
-            email="admin@fitscore.com",
+            email="admin@podium.com",
             password_hash=get_password_hash("admin123"),
             full_name="Administrador",
             role="admin",
@@ -48,7 +48,7 @@ def seed_database():
 
         judge1 = User(
             username="judge1",
-            email="judge1@fitscore.com",
+            email="judge1@podium.com",
             password_hash=get_password_hash("judge123"),
             full_name="Juan Juez",
             role="judge",
@@ -57,7 +57,7 @@ def seed_database():
 
         judge2 = User(
             username="judge2",
-            email="judge2@fitscore.com",
+            email="judge2@podium.com",
             password_hash=get_password_hash("judge123"),
             full_name="Maria Juez",
             role="judge",
@@ -66,7 +66,7 @@ def seed_database():
 
         viewer = User(
             username="viewer",
-            email="viewer@fitscore.com",
+            email="viewer@podium.com",
             password_hash=get_password_hash("viewer123"),
             full_name="Espectador",
             role="viewer",

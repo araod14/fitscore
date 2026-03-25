@@ -1,5 +1,5 @@
 """
-Scoring module for FitScore algorithm.
+Scoring module for Podium algorithm.
 """
 
 from .fitscore import (
