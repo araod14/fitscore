@@ -70,3 +70,6 @@ CLAUDE.md
 *.temp
 tmp/
 temp/
+
+# Playwright MCP
+.playwright-mcp/

@@ -217,11 +217,11 @@
                         </div>
 
                         <div x-show="importResult" class="p-3 rounded-md text-sm"
-                             :class="importResult.error_count > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'">
-                            <p>Importados: <span x-text="importResult.success_count"></span></p>
-                            <p x-show="importResult.error_count > 0">Errores: <span x-text="importResult.error_count"></span></p>
-                            <ul x-show="importResult.errors && importResult.errors.length > 0" class="mt-2 list-disc list-inside">
-                                <template x-for="err in importResult.errors.slice(0, 5)" :key="err">
+                             :class="importResult?.error_count > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'">
+                            <p>Importados: <span x-text="importResult?.success_count"></span></p>
+                            <p x-show="importResult?.error_count > 0">Errores: <span x-text="importResult?.error_count"></span></p>
+                            <ul x-show="importResult?.errors?.length > 0" class="mt-2 list-disc list-inside">
+                                <template x-for="err in (importResult?.errors || []).slice(0, 5)" :key="err">
                                     <li x-text="err"></li>
                                 </template>
                             </ul>
@@ -284,9 +284,15 @@ function athletesPage() {
 
         async init() {
             await this.loadCompetitions();
-            // Auto-select first competition if available
-            if (this.competitions.length > 0) {
+            // Auto-select from URL param or first competition
+            const params = new URLSearchParams(window.location.search);
+            const urlComp = params.get('competition');
+            if (urlComp && this.competitions.find(c => c.id == urlComp)) {
+                this.selectedCompetition = parseInt(urlComp);
+            } else if (this.competitions.length > 0) {
                 this.selectedCompetition = this.competitions[0].id;
+            }
+            if (this.selectedCompetition) {
                 await this.loadAthletes();
             }
         },
@@ -371,15 +377,24 @@ function athletesPage() {
                     body = { ...this.form, competition_id: parseInt(this.selectedCompetition) };
                 }
 
+                // Convert empty strings to null for optional fields
+                const cleanBody = Object.fromEntries(
+                    Object.entries(body).map(([k, v]) => [k, v === '' ? null : v])
+                );
+
                 const res = await fetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify(cleanBody)
                 });
 
                 if (!res.ok) {
                     const data = await res.json();
-                    throw new Error(data.detail || 'Error al guardar');
+                    const detail = data.detail;
+                    if (Array.isArray(detail)) {
+                        throw new Error(detail.map(e => e.msg).join('; '));
+                    }
+                    throw new Error(detail || 'Error al guardar');
                 }
 
                 this.closeModal();

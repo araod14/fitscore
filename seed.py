@@ -150,8 +150,8 @@ def seed_database():
 
         # Standards for different divisions (weights in kg)
         standards_map = {
-            "RX Masculino": {"wod1": 43, "wod2": 61, "wod3": 70, "wod4": None},
-            "RX Femenino": {"wod1": 29, "wod2": 43, "wod3": 47, "wod4": None},
+            "Libre Masculino": {"wod1": 43, "wod2": 61, "wod3": 70, "wod4": None},
+            "Libre Femenino": {"wod1": 29, "wod2": 43, "wod3": 47, "wod4": None},
             "Scaled Masculino": {"wod1": 29, "wod2": 43, "wod3": 47, "wod4": None},
             "Scaled Femenino": {"wod1": 20, "wod2": 29, "wod3": 34, "wod4": None},
             "Master +40 Masculino": {"wod1": 34, "wod2": 52, "wod3": 61, "wod4": None},
@@ -292,8 +292,8 @@ def seed_database():
 
         # Create 5 athletes per division (50 total)
         active_divisions = [
-            "RX Masculino",
-            "RX Femenino",
+            "Libre Masculino",
+            "Libre Femenino",
             "Scaled Masculino",
             "Scaled Femenino",
             "Master +40 Masculino",

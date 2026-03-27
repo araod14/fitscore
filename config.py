@@ -39,6 +39,8 @@ DIVISIONS = [
     "Scaled Femenino",
     "Master +40 Masculino",
     "Master +40 Femenino",
+    "Master +50 Masculino",
+    "Master +50 Femenino",
     "Novato Masculino",
     "Novato Femenino",
 ]

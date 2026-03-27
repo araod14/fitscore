@@ -2,7 +2,8 @@
 # Python dependencies
 
 # Web Framework
-fastapi>=0.104.0
+fastapi>=0.104.0,<0.116.0
+starlette>=0.40.0,<1.0.0
 uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 

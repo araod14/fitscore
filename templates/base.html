@@ -18,16 +18,23 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
+                            50:  '#fdf2f4',
+                            100: '#fce7eb',
+                            200: '#f8bfc8',
+                            300: '#f28fa0',
+                            400: '#e05570',
+                            500: '#c0283f',
+                            600: '#991528',
+                            700: '#6B0F1A',
+                            800: '#4A0A12',
+                            900: '#2d060b',
+                        },
+                        gold: {
+                            300: '#f0d060',
+                            400: '#e8bc2a',
+                            500: '#C9A227',
+                            600: '#a8841f',
+                            700: '#856919',
                         }
                     }
                 }
@@ -67,47 +74,44 @@
 <body class="bg-gray-100 min-h-screen">
     {% block body %}
     <!-- Navigation -->
-    <nav class="bg-primary-700 text-white shadow-lg no-print">
+    <nav class="bg-primary-800 text-white shadow-lg no-print" style="border-bottom: 2px solid #C9A227;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
+            <div class="flex items-center justify-between h-20">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <a href="/" class="flex items-center space-x-2">
-                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/>
-                        </svg>
-                        <span class="text-xl font-bold">Podium</span>
+                    <a href="/" class="flex items-center space-x-3">
+                        <img src="/static/images/king7-emblem.png" alt="King 7 Box Cross" class="h-16 w-auto">
                     </a>
                 </div>
 
                 <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-4">
+                <div class="hidden md:flex items-center space-x-2">
                     {% if user %}
                         {% if user.role == 'admin' %}
-                        <a href="/admin" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-600">
+                        <a href="/admin" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-700 transition-colors">
                             Admin
                         </a>
                         {% endif %}
                         {% if user.role in ['admin', 'judge'] %}
-                        <a href="/judge" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-600">
+                        <a href="/judge" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-700 transition-colors">
                             Juez
                         </a>
                         {% endif %}
-                        <a href="/leaderboard" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-600">
+                        <a href="/leaderboard" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-700 transition-colors">
                             Leaderboard
                         </a>
-                        <div class="ml-4 flex items-center space-x-2">
-                            <span class="text-sm">{{ user.username }}</span>
-                            <span class="px-2 py-1 text-xs bg-primary-800 rounded">{{ user.role }}</span>
+                        <div class="ml-3 flex items-center space-x-2 border-l border-primary-600 pl-3">
+                            <span class="text-sm text-gray-300">{{ user.username }}</span>
+                            <span class="px-2 py-1 text-xs rounded font-semibold" style="background-color: #C9A227; color: #2d060b;">{{ user.role }}</span>
                         </div>
-                        <a href="/logout" class="px-3 py-2 rounded-md text-sm font-medium bg-red-600 hover:bg-red-700">
+                        <a href="/logout" class="px-3 py-2 rounded-md text-sm font-medium bg-primary-600 hover:bg-primary-500 transition-colors">
                             Salir
                         </a>
                     {% else %}
-                        <a href="/leaderboard" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-600">
+                        <a href="/leaderboard" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-primary-700 transition-colors">
                             Leaderboard
                         </a>
-                        <a href="/login" class="px-3 py-2 rounded-md text-sm font-medium bg-primary-600 hover:bg-primary-500">
+                        <a href="/login" class="px-3 py-2 rounded-md text-sm font-medium transition-colors" style="background-color: #C9A227; color: #2d060b; font-weight: 600;">
                             Iniciar Sesion
                         </a>
                     {% endif %}
@@ -115,7 +119,7 @@
 
                 <!-- Mobile menu button -->
                 <div class="md:hidden">
-                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-md hover:bg-primary-600">
+                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-md hover:bg-primary-700 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -125,20 +129,20 @@
         </div>
 
         <!-- Mobile Menu -->
-        <div x-show="sidebarOpen" x-cloak class="md:hidden">
-            <div class="px-2 pt-2 pb-3 space-y-1">
+        <div x-show="sidebarOpen" x-cloak class="md:hidden" style="border-top: 1px solid #C9A227;">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-primary-900">
                 {% if user %}
                     {% if user.role == 'admin' %}
-                    <a href="/admin" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-600">Admin</a>
+                    <a href="/admin" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-700">Admin</a>
                     {% endif %}
                     {% if user.role in ['admin', 'judge'] %}
-                    <a href="/judge" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-600">Juez</a>
+                    <a href="/judge" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-700">Juez</a>
                     {% endif %}
-                    <a href="/leaderboard" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-600">Leaderboard</a>
-                    <a href="/logout" class="block px-3 py-2 rounded-md text-base font-medium bg-red-600 hover:bg-red-700">Salir</a>
+                    <a href="/leaderboard" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-700">Leaderboard</a>
+                    <a href="/logout" class="block px-3 py-2 rounded-md text-base font-medium bg-primary-600 hover:bg-primary-500">Salir</a>
                 {% else %}
-                    <a href="/leaderboard" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-600">Leaderboard</a>
-                    <a href="/login" class="block px-3 py-2 rounded-md text-base font-medium bg-primary-600 hover:bg-primary-500">Iniciar Sesion</a>
+                    <a href="/leaderboard" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-primary-700">Leaderboard</a>
+                    <a href="/login" class="block px-3 py-2 rounded-md text-base font-medium" style="background-color: #C9A227; color: #2d060b;">Iniciar Sesion</a>
                 {% endif %}
             </div>
         </div>
@@ -159,15 +163,20 @@
     </div>
     {% endif %}
 
+    <!-- Brand Logo Banner -->
+    <div class="bg-white no-print flex justify-center py-2 border-b border-gray-200">
+        <a href="/"><img src="/static/images/king7-logo.png" alt="King 7 Box Cross" class="h-20 w-auto"></a>
+    </div>
+
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-4 mt-auto no-print">
+    <footer class="bg-primary-900 text-gray-300 py-4 mt-auto no-print" style="border-top: 2px solid #C9A227;">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm">
-            <p>&copy; {{ current_year }} Podium - Sistema de Gestion de Competencias CrossFit</p>
+            <p>&copy; {{ current_year }} King 7 Box Cross - Sistema de Gestion de Competencias CrossFit</p>
         </div>
     </footer>
     {% endblock %}
