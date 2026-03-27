@@ -30,23 +30,26 @@ Sistema completo para gestionar competencias de CrossFit con sistema de puntuaci
 ### Instalacion Local
 
 ```bash
-# Clonar repositorio
+# Clonar repositorio y entrar al directorio
 cd fitscore
 
-# Crear entorno virtual
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# o: venv\Scripts\activate  # Windows
+# Instalar dependencias y poblar con datos de prueba
+make seed
 
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Crear datos de prueba
-python seed.py
-
-# Ejecutar aplicacion
-uvicorn main:app --reload
+# Ejecutar servidor de desarrollo (puerto 8000, hot reload)
+make dev
 ```
+
+Otros comandos disponibles:
+
+| Comando | Descripcion |
+|---------|-------------|
+| `make install` | Crea el venv e instala dependencias |
+| `make seed` | Instala + carga datos de prueba |
+| `make dev` | Servidor de desarrollo con hot reload |
+| `make prod` | Servidor de produccion (gunicorn) |
+| `make migrate` | Ejecuta migraciones Alembic |
+| `make reset` | Reset completo: limpia + instala + seed |
 
 ### Con Docker
 
