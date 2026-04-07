@@ -1,7 +1,7 @@
 # FitScore - Makefile
 # Uso: make [comando]
 
-.PHONY: help install seed dev prod clean
+.PHONY: help install seed dev prod clean test
 
 PYTHON := python3
 VENV := venv
@@ -46,6 +46,9 @@ run: dev ## Alias para dev
 
 migrate: install ## Ejecutar migraciones
 	$(VENV_BIN)/alembic upgrade head
+
+test: install ## Ejecutar tests
+	$(VENV_BIN)/pytest tests/ -v
 
 clean: ## Limpiar archivos generados
 	rm -rf $(VENV)
