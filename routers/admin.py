@@ -8,7 +8,8 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import Integer as SAInteger
+from sqlalchemy import cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -555,17 +556,14 @@ async def create_team(
             detail="Esta competencia no es de equipos.",
         )
 
-    # Auto-assign next bib number
+    # Auto-assign next bib number (cast to int for correct numeric max)
     max_bib_result = await db.execute(
-        select(func.max(Athlete.bib_number)).where(
+        select(func.max(cast(Athlete.bib_number, SAInteger))).where(
             Athlete.competition_id == competition_id
         )
     )
-    max_bib = max_bib_result.scalar() or "0"
-    try:
-        next_bib = str(int(max_bib) + 1)
-    except ValueError:
-        next_bib = "1"
+    max_bib = max_bib_result.scalar() or 0
+    next_bib = str(max_bib + 1)
 
     new_team = Athlete(
         name=team.name,
