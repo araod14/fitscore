@@ -9,9 +9,22 @@ APP_NAME = "Podium"
 APP_VERSION = "1.0.0"
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
+
 # Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./podium.db")
-DATABASE_URL_SYNC = os.getenv("DATABASE_URL_SYNC", "sqlite:///./podium.db")
+# Railway provides DATABASE_URL as postgres://... — normalize to SQLAlchemy format
+def _normalize_db_url(url: str, async_driver: bool) -> str:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    if async_driver and url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+_raw_db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./podium.db")
+DATABASE_URL = _normalize_db_url(_raw_db_url, async_driver=True)
+DATABASE_URL_SYNC = _normalize_db_url(
+    os.getenv("DATABASE_URL_SYNC", _raw_db_url), async_driver=False
+)
 
 # JWT Settings
 SECRET_KEY = os.getenv("SECRET_KEY", "podium-secret-key-change-in-production-2025")

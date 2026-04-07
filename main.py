@@ -21,7 +21,7 @@ from auth import (
     get_current_user,
 )
 from config import APP_NAME, APP_VERSION, DEBUG
-from database import create_tables, get_db
+from database import get_db
 from models import Competition, User
 from routers import (
     admin_router,
@@ -36,10 +36,11 @@ from routers import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    # Startup
+    import subprocess
+
     print(f"Starting {APP_NAME} v{APP_VERSION}...")
-    await create_tables()
-    print("Database tables created/verified.")
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    print("Migrations applied.")
     yield
     # Shutdown
     print(f"Shutting down {APP_NAME}...")
