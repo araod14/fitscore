@@ -39,7 +39,9 @@ async def lifespan(app: FastAPI):
     import subprocess
 
     print(f"Starting {APP_NAME} v{APP_VERSION}...")
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    import sys
+
+    subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], check=True)
     print("Migrations applied.")
     yield
     # Shutdown

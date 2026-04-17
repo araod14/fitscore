@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Podium{% endblock %}</title>
 
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,600;0,700;0,800;1,600;1,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
     <!-- TailwindCSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -16,6 +21,10 @@
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Barlow', 'sans-serif'],
+                    },
                     colors: {
                         primary: {
                             50:  '#fdf2f4',
@@ -44,6 +53,21 @@
 
     <style>
         [x-cloak] { display: none !important; }
+
+        body {
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+
+        h1, h2, h3, .font-display {
+            font-family: 'Barlow', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        /* Smooth transitions */
+        .transition-all {
+            transition-duration: 200ms;
+        }
 
         /* Print styles */
         @media print {

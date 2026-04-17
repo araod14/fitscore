@@ -20,8 +20,10 @@ def _normalize_db_url(url: str, async_driver: bool) -> str:
     return url
 
 
-_raw_db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./podium.db")
+_raw_db_url = os.getenv("DATABASE_URL", "sqlite:///./podium.db")
 DATABASE_URL = _normalize_db_url(_raw_db_url, async_driver=True)
+if DATABASE_URL.startswith("sqlite://"):
+    DATABASE_URL = DATABASE_URL.replace("sqlite://", "sqlite+aiosqlite://", 1)
 DATABASE_URL_SYNC = _normalize_db_url(
     os.getenv("DATABASE_URL_SYNC", _raw_db_url), async_driver=False
 )

@@ -16,21 +16,29 @@
     <!-- Header -->
     <div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900" x-text="competition?.name || 'Leaderboard'"></h1>
-            <p class="text-gray-600">
+            <h1 class="text-3xl font-display font-bold text-gray-900" x-text="competition?.name || 'Leaderboard'"></h1>
+            <p class="text-gray-600 font-medium">
                 <span x-text="formatDate(competition?.date)"></span>
                 <span x-show="competition?.location" x-text="' - ' + competition?.location"></span>
             </p>
         </div>
         <div class="flex items-center space-x-4 no-print">
+            <!-- Loading Indicator (Pulse) -->
+            <div x-show="loading" class="flex items-center text-primary-600 font-medium text-sm">
+                <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Actualizando...
+            </div>
             <!-- Auto-refresh toggle -->
-            <label class="flex items-center text-sm text-gray-600">
+            <label class="flex items-center text-sm text-gray-600 cursor-pointer">
                 <input type="checkbox" x-model="autoRefresh" @change="toggleAutoRefresh()"
                        class="mr-2 rounded text-primary-600 focus:ring-primary-500">
                 Auto-actualizar
             </label>
             <!-- Print button -->
-            <button @click="window.print()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+            <button @click="window.print()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-md hover:bg-gray-50 transition-colors shadow-sm font-medium">
                 <svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
                 </svg>
@@ -40,10 +48,10 @@
     </div>
 
     <!-- Competition Selector (if no specific competition) -->
-    <div x-show="!competitionId" class="mb-6 bg-white rounded-lg shadow p-4 no-print">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Competencia</label>
+    <div x-show="!competitionId" class="mb-6 bg-white rounded-lg shadow-sm border border-gray-100 p-4 no-print">
+        <label class="block text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Seleccionar Competencia</label>
         <select x-model="selectedCompetition" @change="loadLeaderboard()"
-                class="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                class="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 py-2">
             <option value="">Seleccionar...</option>
             <template x-for="comp in competitions" :key="comp.id">
                 <option :value="comp.id" x-text="comp.name"></option>
@@ -58,7 +66,7 @@
                 <template x-for="div in divisions" :key="div">
                     <button @click="selectedDivision = div"
                             :class="selectedDivision === div ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                            class="whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm">
+                            class="whitespace-nowrap py-4 px-4 border-b-2 font-bold text-sm uppercase tracking-wider font-display transition-all">
                         <span x-text="div"></span>
                     </button>
                 </template>
@@ -67,13 +75,13 @@
     </div>
 
     <!-- WODs Header -->
-    <div x-show="wods.length > 0" class="mb-4 bg-white rounded-lg shadow p-4">
-        <div class="grid gap-2" :style="'grid-template-columns: 60px 1fr 80px repeat(' + wods.length + ', 100px)'">
-            <div class="text-xs font-medium text-gray-500 uppercase">Pos</div>
-            <div class="text-xs font-medium text-gray-500 uppercase">Atleta</div>
-            <div class="text-xs font-medium text-gray-500 uppercase text-center">Total</div>
+    <div x-show="wods.length > 0" class="mb-4 bg-gray-900 text-white rounded-lg shadow-md p-4">
+        <div class="grid gap-2 items-center" :style="'grid-template-columns: 60px 1fr 80px repeat(' + wods.length + ', 100px)'">
+            <div class="text-xs font-bold uppercase tracking-widest text-gray-400">Pos</div>
+            <div class="text-xs font-bold uppercase tracking-widest text-gray-400">Atleta</div>
+            <div class="text-xs font-bold uppercase tracking-widest text-primary-400 text-center">Total</div>
             <template x-for="wod in wods" :key="wod.id">
-                <div class="text-xs font-medium text-gray-500 uppercase text-center">
+                <div class="text-xs font-bold uppercase tracking-widest text-gray-300 text-center">
                     <span x-text="wod.name"></span>
                 </div>
             </template>
@@ -81,43 +89,50 @@
     </div>
 
     <!-- Leaderboard Table -->
-    <div x-show="currentLeaderboard.length > 0" class="space-y-2">
+    <div x-show="currentLeaderboard.length > 0" class="space-y-3">
         <template x-for="entry in currentLeaderboard" :key="entry.athlete_id">
-            <div class="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
-                 :class="{ 'ring-2 ring-yellow-400': entry.rank === 1, 'ring-2 ring-gray-400': entry.rank === 2, 'ring-2 ring-amber-700': entry.rank === 3 }">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
+                 :class="{
+                    'ring-2 ring-yellow-400 bg-yellow-50/30': entry.rank === 1,
+                    'ring-2 ring-gray-300 bg-gray-50/30': entry.rank === 2,
+                    'ring-2 ring-amber-600 bg-amber-50/30': entry.rank === 3
+                 }">
                 <div class="grid gap-2 items-center" :style="'grid-template-columns: 60px 1fr 80px repeat(' + wods.length + ', 100px)'">
                     <!-- Rank -->
                     <div class="flex items-center justify-center">
                         <span :class="{
-                            'text-white': entry.rank <= 3,
+                            'text-white shadow-lg': entry.rank <= 3,
                             'bg-gray-100 text-gray-600': entry.rank > 3
-                        }" :style="entry.rank === 1 ? 'background: linear-gradient(135deg, #f6d860, #d4a017); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : entry.rank === 2 ? 'background: linear-gradient(135deg, #e8e8e8, #a8a8a8); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : entry.rank === 3 ? 'background: linear-gradient(135deg, #d4845a, #8b4513); text-shadow: 0 1px 2px rgba(0,0,0,0.3)' : ''" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg">
+                        }" :style="entry.rank === 1 ? 'background: linear-gradient(135deg, #f6d860, #d4a017);' : entry.rank === 2 ? 'background: linear-gradient(135deg, #e8e8e8, #a8a8a8);' : entry.rank === 3 ? 'background: linear-gradient(135deg, #d4845a, #8b4513);' : ''" class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl font-display italic">
                             <span x-text="entry.rank"></span>
                         </span>
                     </div>
 
                     <!-- Athlete Info -->
                     <div>
-                        <div class="font-medium text-gray-900" x-text="entry.athlete_name"></div>
-                        <div class="text-sm text-gray-500" x-show="selectedDivision !== 'Equipos'">
-                            <span x-text="'#' + entry.bib_number"></span>
-                            <span x-show="entry.box" class="ml-2" x-text="entry.box"></span>
+                        <div class="font-bold text-lg text-gray-900 font-display leading-tight" x-text="entry.athlete_name"></div>
+                        <div class="text-xs text-gray-500 font-medium uppercase tracking-tighter" x-show="selectedDivision !== 'Equipos'">
+                            <span class="bg-gray-100 px-1.5 py-0.5 rounded" x-text="'#' + entry.bib_number"></span>
+                            <span x-show="entry.box" class="ml-2 inline-flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
+                                <span x-text="entry.box"></span>
+                            </span>
                         </div>
                     </div>
 
                     <!-- Total Points -->
                     <div class="text-center">
-                        <span class="text-xl font-bold text-primary-600" x-text="entry.total_points"></span>
-                        <span class="text-xs text-gray-500 block">pts</span>
+                        <span class="text-2xl font-bold text-primary-600 font-display italic" x-text="entry.total_points"></span>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase block tracking-tighter -mt-1">Puntos</span>
                     </div>
 
                     <!-- WOD Scores -->
                     <template x-for="wod in wods" :key="'score-' + wod.id">
-                        <div class="text-center">
+                        <div class="text-center border-l border-gray-50">
                             <template x-if="getWODScore(entry, wod.id)">
                                 <div>
-                                    <span class="font-medium" x-text="getWODScore(entry, wod.id).points"></span>
-                                    <span class="text-xs text-gray-400 block" x-text="formatResult(getWODScore(entry, wod.id), wod.wod_type)"></span>
+                                    <span class="font-bold text-gray-800" x-text="getWODScore(entry, wod.id).points"></span>
+                                    <span class="text-[11px] text-gray-500 block font-medium" x-text="formatResult(getWODScore(entry, wod.id), wod.wod_type)"></span>
                                 </div>
                             </template>
                             <template x-if="!getWODScore(entry, wod.id)">
@@ -131,12 +146,12 @@
     </div>
 
     <!-- Empty State -->
-    <div x-show="currentLeaderboard.length === 0 && !loading" class="bg-white rounded-lg shadow p-8 text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+    <div x-show="currentLeaderboard.length === 0 && !loading" class="bg-white rounded-lg shadow-sm border border-dashed border-gray-300 p-12 text-center transition-all">
+        <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
         </svg>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">No hay resultados disponibles</h3>
-        <p class="mt-2 text-gray-500">Aun no se han registrado scores para esta division.</p>
+        <h3 class="mt-4 text-xl font-display font-bold text-gray-900 uppercase">Sin Resultados</h3>
+        <p class="mt-2 text-gray-500 max-w-xs mx-auto">Aun no se han registrado puntuaciones para esta division en la competencia actual.</p>
     </div>
 
     <!-- Loading State -->
