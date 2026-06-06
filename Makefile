@@ -1,7 +1,7 @@
 # FitScore - Makefile
 # Uso: make [comando]
 
-.PHONY: help install seed dev prod clean test migrate deploy setup-vps
+.PHONY: help install seed dev prod clean test migrate docker-build docker-up docker-down docker-deploy docker-logs
 
 PYTHON := python3
 VENV := venv
@@ -61,31 +61,30 @@ clean: ## Limpiar archivos generados
 reset: clean install seed ## Reiniciar todo (limpiar + instalar + seed)
 	@echo "✓ Proyecto reiniciado"
 
-deploy: ## Desplegar en VPS (git pull + instalar deps + migraciones + reiniciar servicio)
-	@echo "🚀 Desplegando FitScore en VPS..."
-	git pull origin main
-	$(PYTHON_VENV) -m pip install --upgrade -r requirements.txt
-	$(VENV_BIN)/alembic upgrade head
-	@echo "✓ Dependencias actualizadas y migraciones ejecutadas"
-	@echo "🔄 Para reiniciar el servicio systemd:"
-	@echo "   sudo systemctl restart fitscore"
+docker-build: ## Compilar imagen Docker
+	@echo "🐳 Compilando imagen Docker..."
+	docker-compose build
 
-setup-vps: ## Setup inicial para VPS (ejecutar una sola vez)
-	@echo "📦 Setup inicial del VPS..."
-	$(PYTHON) -m venv $(VENV)
-	$(PYTHON_VENV) -m pip install --upgrade pip
-	$(PYTHON_VENV) -m pip install -r requirements.txt
-	$(VENV_BIN)/alembic upgrade head
-	@echo ""
-	@echo "✓ Setup completado. Próximos pasos:"
-	@echo ""
-	@echo "1. Configurar variables de entorno en .env:"
-	@echo "   SECRET_KEY=<clave-segura>"
-	@echo "   DEBUG=False"
-	@echo ""
-	@echo "2. Crear archivo systemd en /etc/systemd/system/fitscore.service"
-	@echo "   (Ver plantilla en documentación)"
-	@echo ""
-	@echo "3. Iniciar servicio:"
-	@echo "   sudo systemctl start fitscore"
-	@echo "   sudo systemctl enable fitscore"
+docker-up: ## Iniciar contenedores Docker (desarrollo)
+	@echo "🚀 Iniciando contenedores..."
+	docker-compose up -d
+	@echo "✓ FitScore disponible en http://localhost:8000"
+	@echo "✓ Logs: make docker-logs"
+
+docker-deploy: ## Deploy en VPS con Docker (git pull + rebuild + restart)
+	@echo "🚀 Desplegando FitScore con Docker..."
+	git pull origin main
+	docker-compose build
+	docker-compose up -d
+	docker-compose exec -T app alembic upgrade head
+	@echo "✓ Deploy completado"
+
+docker-down: ## Detener contenedores Docker
+	@echo "🛑 Deteniendo contenedores..."
+	docker-compose down
+
+docker-logs: ## Ver logs en vivo
+	docker-compose logs -f app
+
+docker-shell: ## Acceder shell del contenedor
+	docker-compose exec app bash

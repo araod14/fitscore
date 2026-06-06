@@ -5,14 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-make install     # Create venv and install dependencies
-make seed        # Install + populate with test data
-make dev         # Run development server (port 8000, hot reload)
-make prod        # Run production server (gunicorn)
-make migrate     # Run Alembic migrations
-make reset       # Full reset: clean + install + seed
-make deploy      # Deploy to VPS: git pull + install + migrate + restart
-make setup-vps   # Initial VPS setup (run once)
+make install        # Create venv and install dependencies (local dev)
+make seed           # Install + populate with test data
+make dev            # Run development server (port 8000, hot reload)
+make prod           # Run production server (gunicorn)
+make migrate        # Run Alembic migrations
+make reset          # Full reset: clean + install + seed
+
+# Docker commands (for VPS deployment)
+make docker-build   # Build Docker image
+make docker-up      # Start containers
+make docker-down    # Stop containers
+make docker-deploy  # Deploy: git pull + rebuild + restart
+make docker-logs    # View container logs
+make docker-shell   # Access container shell
 ```
 
 Direct equivalents:
@@ -66,108 +72,112 @@ SQLite with `aiosqlite`; async sessions via `database.py`. Migrations in `alembi
 ### Frontend
 Jinja2 templates with TailwindCSS (CDN) and Alpine.js — no build step needed.
 
-## VPS Deployment
+## Docker Deployment
 
 ### Initial Setup (one time)
 
 1. **SSH into VPS and clone repo:**
    ```bash
    ssh user@your-vps-ip
-   cd /var/www  # or your preferred directory
+   cd /path/to/projects  # Your Docker projects directory
    git clone https://github.com/yourusername/fitscore.git
    cd fitscore
    ```
 
-2. **Install system dependencies:**
+2. **Install Docker & Docker Compose** (if not already installed):
    ```bash
-   sudo apt update && sudo apt install -y python3.11 python3.11-venv git curl
+   sudo apt update && sudo apt install -y docker.io docker-compose
+   sudo usermod -aG docker $USER  # Add user to docker group
+   newgrp docker  # Activate group changes
    ```
 
-3. **Run VPS setup:**
-   ```bash
-   make setup-vps
-   ```
-
-4. **Create `.env` file with production config:**
+3. **Create `.env` file with production config:**
    ```bash
    cat > .env << 'EOF'
-   SECRET_KEY=your-very-secure-random-key-here
+   SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
    DEBUG=False
-   DATABASE_URL=sqlite+aiosqlite:///./fitscore.db
-   DATABASE_URL_SYNC=sqlite:///./fitscore.db
    EOF
    chmod 600 .env
    ```
 
-5. **Create systemd service** (`/etc/systemd/system/fitscore.service`):
-   ```ini
-   [Unit]
-   Description=FitScore FastAPI Application
-   After=network.target
-
-   [Service]
-   Type=notify
-   User=www-data
-   WorkingDirectory=/var/www/fitscore
-   Environment="PATH=/var/www/fitscore/venv/bin"
-   EnvironmentFile=/var/www/fitscore/.env
-   ExecStart=/var/www/fitscore/venv/bin/gunicorn main:app \
-       -w 4 \
-       -k uvicorn.workers.UvicornWorker \
-       -b 127.0.0.1:8000
-   Restart=always
-   RestartSec=10
-   StandardOutput=journal
-   StandardError=journal
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-6. **Enable and start service:**
+4. **Build and start containers:**
    ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl start fitscore
-   sudo systemctl enable fitscore
+   make docker-build
+   make docker-up
    ```
 
-7. **Configure reverse proxy** (Nginx):
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
+5. **Run migrations:**
+   ```bash
+   docker-compose exec -T app alembic upgrade head
+   ```
 
-       location / {
-           proxy_pass http://127.0.0.1:8000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-       }
-   }
+   App is now available at `http://your-vps-ip`
+
+### Configuration Files
+
+- **`docker-compose.yml`** — Defines app and nginx services, volumes, networks
+- **`nginx.conf`** — Reverse proxy configuration (HTTP/HTTPS)
+- **`Dockerfile`** — Python 3.11-slim with gunicorn and FastAPI
+- **`.env`** — Environment variables (not in git, create per deployment)
+
+### SSL/HTTPS Setup
+
+1. **Copy SSL certificates to `/ssl` directory:**
+   ```bash
+   mkdir -p ssl
+   cp your-cert.pem ssl/cert.pem
+   cp your-key.pem ssl/key.pem
+   ```
+
+2. **Uncomment HTTPS section in `nginx.conf` and update domain:**
+   ```bash
+   sed -i 's/# server {/server {/' nginx.conf
+   # Then manually edit server_name and paths in nginx.conf
+   ```
+
+3. **Restart nginx:**
+   ```bash
+   make docker-down
+   make docker-up
    ```
 
 ### Ongoing Deployments
 
-After each code change:
+After each code change, deploy with one command:
 ```bash
-ssh user@your-vps-ip
-cd /var/www/fitscore
-make deploy  # Pulls latest code, installs deps, runs migrations, restarts
+make docker-deploy  # git pull + rebuild + restart + migrations
 ```
 
-Or manually:
+Or step-by-step:
 ```bash
 git pull origin main
-venv/bin/pip install -r requirements.txt
-venv/bin/alembic upgrade head
-sudo systemctl restart fitscore
+make docker-build
+make docker-up
+docker-compose exec -T app alembic upgrade head
 ```
 
-### Monitoring
+### Monitoring & Debugging
 
-Check service status:
 ```bash
-sudo systemctl status fitscore
-sudo journalctl -u fitscore -f  # Live logs
+make docker-logs           # View live logs
+make docker-shell          # Access app container shell
+docker-compose ps          # List running containers
+docker-compose down        # Stop all containers
+```
+
+### Useful Docker Commands
+
+```bash
+# View logs for specific service
+docker-compose logs app
+docker-compose logs nginx
+
+# Restart a service
+docker-compose restart app
+
+# Rebuild without cache
+docker-compose build --no-cache
+
+# Remove volumes and data (careful!)
+docker-compose down -v
 ```
