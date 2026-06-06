@@ -63,7 +63,7 @@ Thumbs.db
 .env.production
 
 # Claude
-CLAUDE.md
+# CLAUDE.md is now tracked in git for deployment/development documentation
 
 # Temporary files
 *.tmp

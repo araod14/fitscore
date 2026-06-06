@@ -1,7 +1,7 @@
 # FitScore - Makefile
 # Uso: make [comando]
 
-.PHONY: help install seed dev prod clean test
+.PHONY: help install seed dev prod clean test migrate deploy setup-vps
 
 PYTHON := python3
 VENV := venv
@@ -60,3 +60,32 @@ clean: ## Limpiar archivos generados
 
 reset: clean install seed ## Reiniciar todo (limpiar + instalar + seed)
 	@echo "✓ Proyecto reiniciado"
+
+deploy: ## Desplegar en VPS (git pull + instalar deps + migraciones + reiniciar servicio)
+	@echo "🚀 Desplegando FitScore en VPS..."
+	git pull origin main
+	$(PYTHON_VENV) -m pip install --upgrade -r requirements.txt
+	$(VENV_BIN)/alembic upgrade head
+	@echo "✓ Dependencias actualizadas y migraciones ejecutadas"
+	@echo "🔄 Para reiniciar el servicio systemd:"
+	@echo "   sudo systemctl restart fitscore"
+
+setup-vps: ## Setup inicial para VPS (ejecutar una sola vez)
+	@echo "📦 Setup inicial del VPS..."
+	$(PYTHON) -m venv $(VENV)
+	$(PYTHON_VENV) -m pip install --upgrade pip
+	$(PYTHON_VENV) -m pip install -r requirements.txt
+	$(VENV_BIN)/alembic upgrade head
+	@echo ""
+	@echo "✓ Setup completado. Próximos pasos:"
+	@echo ""
+	@echo "1. Configurar variables de entorno en .env:"
+	@echo "   SECRET_KEY=<clave-segura>"
+	@echo "   DEBUG=False"
+	@echo ""
+	@echo "2. Crear archivo systemd en /etc/systemd/system/fitscore.service"
+	@echo "   (Ver plantilla en documentación)"
+	@echo ""
+	@echo "3. Iniciar servicio:"
+	@echo "   sudo systemctl start fitscore"
+	@echo "   sudo systemctl enable fitscore"
